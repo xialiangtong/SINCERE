@@ -1,0 +1,19 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:Sincere="http://schemas.android.com/apk/res-auto">
+    <item android:id="@+id/home"
+        android:icon="@drawable/home_button_focused"
+        android:orderInCategory="100"
+        Sincere:showAsAction="always"
+        android:title="home"
+        android:windowNoTitle="false"/>
+    <item android:id="@+id/next"
+        android:icon="@drawable/arrow_right"
+        Sincere:showAsAction="always"
+        android:title="next"
+        android:windowNoTitle="false"/>
+    <item android:id="@+id/pre"
+        android:icon="@drawable/arrow_left"
+        Sincere:showAsAction="always"
+        android:title="pre"
+        android:windowNoTitle="false"/>
+</menu>
