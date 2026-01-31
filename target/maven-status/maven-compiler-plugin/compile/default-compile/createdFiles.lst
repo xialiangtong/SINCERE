@@ -1,0 +1,11 @@
+GiftPairingSolution.class
+GiftPairingSolution$Participant.class
+GiftPairingSolution$PairingEngine.class
+GiftPairingSolution$Pairing.class
+GiftPairingSolution$PairingRule.class
+GiftPairingSolution$FamilyMatchRule.class
+GiftPairingSolution$CSVReader.class
+GiftPairingSolution$DepartmentRule.class
+GiftPairingSolution$SelfMatchingRule.class
+GiftPairingSolution$WriteResultToCSV.class
+GiftPairingSolution$RepeatingFromLastYearRule.class

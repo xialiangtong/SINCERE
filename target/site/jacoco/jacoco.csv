@@ -1,0 +1,11 @@
+GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
+gift-pairing,default,GiftPairingSolution.DepartmentRule,0,31,1,9,0,7,1,6,0,2
+gift-pairing,default,GiftPairingSolution.PairingEngine,0,143,1,19,0,35,1,15,0,6
+gift-pairing,default,GiftPairingSolution.CSVReader,0,130,2,16,0,36,2,11,0,4
+gift-pairing,default,GiftPairingSolution.Pairing,0,15,0,0,0,6,0,3,0,3
+gift-pairing,default,GiftPairingSolution.SelfMatchingRule,0,15,0,2,0,2,0,3,0,2
+gift-pairing,default,GiftPairingSolution.RepeatingFromLastYearRule,0,47,1,9,0,11,1,6,0,2
+gift-pairing,default,GiftPairingSolution.WriteResultToCSV,0,148,2,14,0,31,2,11,0,5
+gift-pairing,default,GiftPairingSolution.FamilyMatchRule,0,31,1,9,0,7,1,6,0,2
+gift-pairing,default,GiftPairingSolution.Participant,0,33,0,0,0,12,0,6,0,6
+gift-pairing,default,GiftPairingSolution,0,119,0,0,0,31,0,13,0,13
