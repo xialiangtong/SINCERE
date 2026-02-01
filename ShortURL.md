@@ -15,3 +15,8 @@ Resolve a short code
 Input: short code
 
 Output: the original long URL (or an HTTP redirect to it)
+
+
+In-memory store first; add collision handling; expiry; tests
+
+Talk about scaling briefly, but implement core correctness
