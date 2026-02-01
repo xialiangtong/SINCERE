@@ -19,69 +19,69 @@ public class GiftPairingSolution {
 
     // Default constructor
     public GiftPairingSolution() {
-<span class="fc" id="L22">        this(new ArrayList&lt;&gt;());</span>
-<span class="fc" id="L23">    }</span>
+<span class="nc" id="L22">        this(new ArrayList&lt;&gt;());</span>
+<span class="nc" id="L23">    }</span>
 
     // Constructor with last year's pairings
-<span class="fc" id="L26">    public GiftPairingSolution(List&lt;Pairing&gt; lastYearPairings) {</span>
-<span class="fc" id="L27">        this.pairingEngine = new PairingEngine();</span>
-<span class="fc" id="L28">        this.csvReader = new CSVReader();</span>
-<span class="fc" id="L29">        this.csvWriter = new WriteResultToCSV();</span>
-<span class="fc" id="L30">        this.lastYearPairings = lastYearPairings;</span>
-<span class="fc" id="L31">        this.generatedPairings = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L26">    public GiftPairingSolution(List&lt;Pairing&gt; lastYearPairings) {</span>
+<span class="nc" id="L27">        this.pairingEngine = new PairingEngine();</span>
+<span class="nc" id="L28">        this.csvReader = new CSVReader();</span>
+<span class="nc" id="L29">        this.csvWriter = new WriteResultToCSV();</span>
+<span class="nc" id="L30">        this.lastYearPairings = lastYearPairings;</span>
+<span class="nc" id="L31">        this.generatedPairings = new ArrayList&lt;&gt;();</span>
         
         // Add all default rules
-<span class="fc" id="L34">        addDefaultRules();</span>
-<span class="fc" id="L35">    }</span>
+<span class="nc" id="L34">        addDefaultRules();</span>
+<span class="nc" id="L35">    }</span>
 
     private void addDefaultRules() {
-<span class="fc" id="L38">        pairingEngine.addRule(new SelfMatchingRule());</span>
-<span class="fc" id="L39">        pairingEngine.addRule(new FamilyMatchRule());</span>
-<span class="fc" id="L40">        pairingEngine.addRule(new RepeatingFromLastYearRule(lastYearPairings));</span>
-<span class="fc" id="L41">        pairingEngine.addRule(new DepartmentRule());</span>
-<span class="fc" id="L42">    }</span>
+<span class="nc" id="L38">        pairingEngine.addRule(new SelfMatchingRule());</span>
+<span class="nc" id="L39">        pairingEngine.addRule(new FamilyMatchRule());</span>
+<span class="nc" id="L40">        pairingEngine.addRule(new RepeatingFromLastYearRule(lastYearPairings));</span>
+<span class="nc" id="L41">        pairingEngine.addRule(new DepartmentRule());</span>
+<span class="nc" id="L42">    }</span>
 
     public void addPairingRule(PairingRule rule) {
-<span class="fc" id="L45">        pairingEngine.addRule(rule);</span>
-<span class="fc" id="L46">    }</span>
+<span class="nc" id="L45">        pairingEngine.addRule(rule);</span>
+<span class="nc" id="L46">    }</span>
 
     public void removePairingRule(PairingRule rule) {
-<span class="fc" id="L49">        pairingEngine.removeRule(rule);</span>
-<span class="fc" id="L50">    }</span>
+<span class="nc" id="L49">        pairingEngine.removeRule(rule);</span>
+<span class="nc" id="L50">    }</span>
 
     public List&lt;Pairing&gt; generatePairs(String filename) throws IOException {
-<span class="fc" id="L53">        List&lt;Participant&gt; participants = csvReader.readFromFile(filename);</span>
-<span class="fc" id="L54">        generatedPairings = pairingEngine.generatePairingResult(participants);</span>
-<span class="fc" id="L55">        return generatedPairings;</span>
+<span class="nc" id="L53">        List&lt;Participant&gt; participants = csvReader.readFromFile(filename);</span>
+<span class="nc" id="L54">        generatedPairings = pairingEngine.generatePairingResult(participants);</span>
+<span class="nc" id="L55">        return generatedPairings;</span>
     }
 
     public List&lt;Pairing&gt; generatePairsFromParticipants(List&lt;Participant&gt; participants) {
-<span class="fc" id="L59">        generatedPairings = pairingEngine.generatePairingResult(participants);</span>
-<span class="fc" id="L60">        return generatedPairings;</span>
+<span class="nc" id="L59">        generatedPairings = pairingEngine.generatePairingResult(participants);</span>
+<span class="nc" id="L60">        return generatedPairings;</span>
     }
 
     public void exportGeneratedPairs(String filename) throws IOException {
-<span class="fc" id="L64">        csvWriter.writeToFile(generatedPairings, filename);</span>
-<span class="fc" id="L65">    }</span>
+<span class="nc" id="L64">        csvWriter.writeToFile(generatedPairings, filename);</span>
+<span class="nc" id="L65">    }</span>
 
     public String exportGeneratedPairsToString() {
-<span class="fc" id="L68">        return csvWriter.writeToString(generatedPairings);</span>
+<span class="nc" id="L68">        return csvWriter.writeToString(generatedPairings);</span>
     }
 
     public PairingEngine getPairingEngine() {
-<span class="fc" id="L72">        return pairingEngine;</span>
+<span class="nc" id="L72">        return pairingEngine;</span>
     }
 
     public CSVReader getCsvReader() {
-<span class="fc" id="L76">        return csvReader;</span>
+<span class="nc" id="L76">        return csvReader;</span>
     }
 
     public WriteResultToCSV getCsvWriter() {
-<span class="fc" id="L80">        return csvWriter;</span>
+<span class="nc" id="L80">        return csvWriter;</span>
     }
 
     public List&lt;Pairing&gt; getGeneratedPairings() {
-<span class="fc" id="L84">        return generatedPairings;</span>
+<span class="nc" id="L84">        return generatedPairings;</span>
     }
 
     // Inner class to represent a participant
@@ -92,165 +92,165 @@ public class GiftPairingSolution {
         private String family;
         private String department;
 
-<span class="fc" id="L95">        public Participant(String id, String name, String email, String family, String department) {</span>
-<span class="fc" id="L96">            this.id = id;</span>
-<span class="fc" id="L97">            this.name = name;</span>
-<span class="fc" id="L98">            this.email = email;</span>
-<span class="fc" id="L99">            this.family = family;</span>
-<span class="fc" id="L100">            this.department = department;</span>
-<span class="fc" id="L101">        }</span>
+<span class="nc" id="L95">        public Participant(String id, String name, String email, String family, String department) {</span>
+<span class="nc" id="L96">            this.id = id;</span>
+<span class="nc" id="L97">            this.name = name;</span>
+<span class="nc" id="L98">            this.email = email;</span>
+<span class="nc" id="L99">            this.family = family;</span>
+<span class="nc" id="L100">            this.department = department;</span>
+<span class="nc" id="L101">        }</span>
 
         public String getId() {
-<span class="fc" id="L104">            return id;</span>
+<span class="nc" id="L104">            return id;</span>
         }
 
         public String getName() {
-<span class="fc" id="L108">            return name;</span>
+<span class="nc" id="L108">            return name;</span>
         }
 
         public String getEmail() {
-<span class="fc" id="L112">            return email;</span>
+<span class="nc" id="L112">            return email;</span>
         }
 
         public String getFamily() {
-<span class="fc" id="L116">            return family;</span>
+<span class="nc" id="L116">            return family;</span>
         }
 
         public String getDepartment() {
-<span class="fc" id="L120">            return department;</span>
+<span class="nc" id="L120">            return department;</span>
         }
     }
 
     // Inner class to read and parse CSV data
-<span class="fc" id="L125">    public static class CSVReader {</span>
+<span class="nc" id="L125">    public static class CSVReader {</span>
         
         // Read participants from a CSV file
         public List&lt;Participant&gt; readFromFile(String filePath) throws IOException {
-<span class="fc" id="L129">            List&lt;Participant&gt; participants = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L129">            List&lt;Participant&gt; participants = new ArrayList&lt;&gt;();</span>
             
-<span class="fc" id="L131">            try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {</span>
+<span class="nc" id="L131">            try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {</span>
                 String line;
-<span class="fc" id="L133">                boolean isHeader = true;</span>
+<span class="nc" id="L133">                boolean isHeader = true;</span>
                 
-<span class="fc bfc" id="L135" title="All 2 branches covered.">                while ((line = reader.readLine()) != null) {</span>
-<span class="fc bfc" id="L136" title="All 2 branches covered.">                    if (isHeader) {</span>
-<span class="fc" id="L137">                        isHeader = false;</span>
-<span class="fc" id="L138">                        continue; // Skip header line</span>
+<span class="nc bnc" id="L135" title="All 2 branches missed.">                while ((line = reader.readLine()) != null) {</span>
+<span class="nc bnc" id="L136" title="All 2 branches missed.">                    if (isHeader) {</span>
+<span class="nc" id="L137">                        isHeader = false;</span>
+<span class="nc" id="L138">                        continue; // Skip header line</span>
                     }
                     
-<span class="fc" id="L141">                    Participant participant = parseLine(line);</span>
-<span class="pc bpc" id="L142" title="1 of 2 branches missed.">                    if (participant != null) {</span>
-<span class="fc" id="L143">                        participants.add(participant);</span>
+<span class="nc" id="L141">                    Participant participant = parseLine(line);</span>
+<span class="nc bnc" id="L142" title="All 2 branches missed.">                    if (participant != null) {</span>
+<span class="nc" id="L143">                        participants.add(participant);</span>
                     }
-<span class="fc" id="L145">                }</span>
+<span class="nc" id="L145">                }</span>
             }
             
-<span class="fc" id="L148">            return participants;</span>
+<span class="nc" id="L148">            return participants;</span>
         }
         
         // Read participants from a CSV string
         public List&lt;Participant&gt; readFromString(String csvContent) throws IOException {
-<span class="fc" id="L153">            List&lt;Participant&gt; participants = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L153">            List&lt;Participant&gt; participants = new ArrayList&lt;&gt;();</span>
             
-<span class="fc" id="L155">            try (BufferedReader reader = new BufferedReader(new StringReader(csvContent))) {</span>
+<span class="nc" id="L155">            try (BufferedReader reader = new BufferedReader(new StringReader(csvContent))) {</span>
                 String line;
-<span class="fc" id="L157">                boolean isHeader = true;</span>
+<span class="nc" id="L157">                boolean isHeader = true;</span>
                 
-<span class="fc bfc" id="L159" title="All 2 branches covered.">                while ((line = reader.readLine()) != null) {</span>
-<span class="fc bfc" id="L160" title="All 2 branches covered.">                    if (isHeader) {</span>
-<span class="fc" id="L161">                        isHeader = false;</span>
-<span class="fc" id="L162">                        continue; // Skip header line</span>
+<span class="nc bnc" id="L159" title="All 2 branches missed.">                while ((line = reader.readLine()) != null) {</span>
+<span class="nc bnc" id="L160" title="All 2 branches missed.">                    if (isHeader) {</span>
+<span class="nc" id="L161">                        isHeader = false;</span>
+<span class="nc" id="L162">                        continue; // Skip header line</span>
                     }
                     
-<span class="fc" id="L165">                    Participant participant = parseLine(line);</span>
-<span class="fc bfc" id="L166" title="All 2 branches covered.">                    if (participant != null) {</span>
-<span class="fc" id="L167">                        participants.add(participant);</span>
+<span class="nc" id="L165">                    Participant participant = parseLine(line);</span>
+<span class="nc bnc" id="L166" title="All 2 branches missed.">                    if (participant != null) {</span>
+<span class="nc" id="L167">                        participants.add(participant);</span>
                     }
-<span class="fc" id="L169">                }</span>
+<span class="nc" id="L169">                }</span>
             }
             
-<span class="fc" id="L172">            return participants;</span>
+<span class="nc" id="L172">            return participants;</span>
         }
         
         // Parse a single CSV line into a Participant
         private Participant parseLine(String line) {
-<span class="pc bpc" id="L177" title="1 of 4 branches missed.">            if (line == null || line.trim().isEmpty()) {</span>
-<span class="fc" id="L178">                return null;</span>
+<span class="nc bnc" id="L177" title="All 4 branches missed.">            if (line == null || line.trim().isEmpty()) {</span>
+<span class="nc" id="L178">                return null;</span>
             }
             
-<span class="fc" id="L181">            String[] fields = line.split(&quot;,&quot;, -1);</span>
+<span class="nc" id="L181">            String[] fields = line.split(&quot;,&quot;, -1);</span>
             
-<span class="fc bfc" id="L183" title="All 2 branches covered.">            if (fields.length &lt; 5) {</span>
-<span class="fc" id="L184">                return null; // Invalid line</span>
+<span class="nc bnc" id="L183" title="All 2 branches missed.">            if (fields.length &lt; 5) {</span>
+<span class="nc" id="L184">                return null; // Invalid line</span>
             }
             
-<span class="fc" id="L187">            String id = fields[0].trim();</span>
-<span class="fc" id="L188">            String name = fields[1].trim();</span>
-<span class="fc" id="L189">            String email = fields[2].trim();</span>
-<span class="fc" id="L190">            String family = fields[3].trim();</span>
-<span class="fc" id="L191">            String department = fields[4].trim();</span>
+<span class="nc" id="L187">            String id = fields[0].trim();</span>
+<span class="nc" id="L188">            String name = fields[1].trim();</span>
+<span class="nc" id="L189">            String email = fields[2].trim();</span>
+<span class="nc" id="L190">            String family = fields[3].trim();</span>
+<span class="nc" id="L191">            String department = fields[4].trim();</span>
             
-<span class="fc" id="L193">            return new Participant(id, name, email, family, department);</span>
+<span class="nc" id="L193">            return new Participant(id, name, email, family, department);</span>
         }
     }
 
     // Inner class to write pairing results to CSV
-<span class="fc" id="L198">    public static class WriteResultToCSV {</span>
+<span class="nc" id="L198">    public static class WriteResultToCSV {</span>
         
         private static final String HEADER = &quot;sender_id,sender_name,sender_email,receiver_id,receiver_name,receiver_email&quot;;
         
         // Write pairings to a CSV file
         public void writeToFile(List&lt;Pairing&gt; pairings, String filePath) throws IOException {
-<span class="fc" id="L204">            try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {</span>
-<span class="fc" id="L205">                writer.write(HEADER);</span>
-<span class="fc" id="L206">                writer.newLine();</span>
+<span class="nc" id="L204">            try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {</span>
+<span class="nc" id="L205">                writer.write(HEADER);</span>
+<span class="nc" id="L206">                writer.newLine();</span>
                 
-<span class="pc bpc" id="L208" title="1 of 2 branches missed.">                if (pairings != null) {</span>
-<span class="fc bfc" id="L209" title="All 2 branches covered.">                    for (Pairing pairing : pairings) {</span>
-<span class="fc" id="L210">                        writer.write(formatPairing(pairing));</span>
-<span class="fc" id="L211">                        writer.newLine();</span>
-<span class="fc" id="L212">                    }</span>
+<span class="nc bnc" id="L208" title="All 2 branches missed.">                if (pairings != null) {</span>
+<span class="nc bnc" id="L209" title="All 2 branches missed.">                    for (Pairing pairing : pairings) {</span>
+<span class="nc" id="L210">                        writer.write(formatPairing(pairing));</span>
+<span class="nc" id="L211">                        writer.newLine();</span>
+<span class="nc" id="L212">                    }</span>
                 }
             }
-<span class="fc" id="L215">        }</span>
+<span class="nc" id="L215">        }</span>
         
         // Write pairings to a CSV string
         public String writeToString(List&lt;Pairing&gt; pairings) {
-<span class="fc" id="L219">            StringBuilder sb = new StringBuilder();</span>
-<span class="fc" id="L220">            sb.append(HEADER).append(&quot;\n&quot;);</span>
+<span class="nc" id="L219">            StringBuilder sb = new StringBuilder();</span>
+<span class="nc" id="L220">            sb.append(HEADER).append(&quot;\n&quot;);</span>
             
-<span class="fc bfc" id="L222" title="All 2 branches covered.">            if (pairings != null) {</span>
-<span class="fc bfc" id="L223" title="All 2 branches covered.">                for (Pairing pairing : pairings) {</span>
-<span class="fc" id="L224">                    sb.append(formatPairing(pairing)).append(&quot;\n&quot;);</span>
-<span class="fc" id="L225">                }</span>
+<span class="nc bnc" id="L222" title="All 2 branches missed.">            if (pairings != null) {</span>
+<span class="nc bnc" id="L223" title="All 2 branches missed.">                for (Pairing pairing : pairings) {</span>
+<span class="nc" id="L224">                    sb.append(formatPairing(pairing)).append(&quot;\n&quot;);</span>
+<span class="nc" id="L225">                }</span>
             }
             
-<span class="fc" id="L228">            return sb.toString();</span>
+<span class="nc" id="L228">            return sb.toString();</span>
         }
         
         // Format a single pairing as a CSV line
         private String formatPairing(Pairing pairing) {
-<span class="fc" id="L233">            Participant sender = pairing.getSender();</span>
-<span class="fc" id="L234">            Participant receiver = pairing.getReceiver();</span>
+<span class="nc" id="L233">            Participant sender = pairing.getSender();</span>
+<span class="nc" id="L234">            Participant receiver = pairing.getReceiver();</span>
             
-<span class="fc" id="L236">            return String.format(&quot;%s,%s,%s,%s,%s,%s&quot;,</span>
-<span class="fc" id="L237">                escapeCSV(sender.getId()),</span>
-<span class="fc" id="L238">                escapeCSV(sender.getName()),</span>
-<span class="fc" id="L239">                escapeCSV(sender.getEmail()),</span>
-<span class="fc" id="L240">                escapeCSV(receiver.getId()),</span>
-<span class="fc" id="L241">                escapeCSV(receiver.getName()),</span>
-<span class="fc" id="L242">                escapeCSV(receiver.getEmail()));</span>
+<span class="nc" id="L236">            return String.format(&quot;%s,%s,%s,%s,%s,%s&quot;,</span>
+<span class="nc" id="L237">                escapeCSV(sender.getId()),</span>
+<span class="nc" id="L238">                escapeCSV(sender.getName()),</span>
+<span class="nc" id="L239">                escapeCSV(sender.getEmail()),</span>
+<span class="nc" id="L240">                escapeCSV(receiver.getId()),</span>
+<span class="nc" id="L241">                escapeCSV(receiver.getName()),</span>
+<span class="nc" id="L242">                escapeCSV(receiver.getEmail()));</span>
         }
         
         // Escape special characters for CSV
         private String escapeCSV(String value) {
-<span class="fc bfc" id="L247" title="All 2 branches covered.">            if (value == null) {</span>
-<span class="fc" id="L248">                return &quot;&quot;;</span>
+<span class="nc bnc" id="L247" title="All 2 branches missed.">            if (value == null) {</span>
+<span class="nc" id="L248">                return &quot;&quot;;</span>
             }
-<span class="pc bpc" id="L250" title="1 of 6 branches missed.">            if (value.contains(&quot;,&quot;) || value.contains(&quot;\&quot;&quot;) || value.contains(&quot;\n&quot;)) {</span>
-<span class="fc" id="L251">                return &quot;\&quot;&quot; + value.replace(&quot;\&quot;&quot;, &quot;\&quot;\&quot;&quot;) + &quot;\&quot;&quot;;</span>
+<span class="nc bnc" id="L250" title="All 6 branches missed.">            if (value.contains(&quot;,&quot;) || value.contains(&quot;\&quot;&quot;) || value.contains(&quot;\n&quot;)) {</span>
+<span class="nc" id="L251">                return &quot;\&quot;&quot; + value.replace(&quot;\&quot;&quot;, &quot;\&quot;\&quot;&quot;) + &quot;\&quot;&quot;;</span>
             }
-<span class="fc" id="L253">            return value;</span>
+<span class="nc" id="L253">            return value;</span>
         }
     }
 
@@ -259,17 +259,17 @@ public class GiftPairingSolution {
         private Participant sender;
         private Participant receiver;
 
-<span class="fc" id="L262">        public Pairing(Participant sender, Participant receiver) {</span>
-<span class="fc" id="L263">            this.sender = sender;</span>
-<span class="fc" id="L264">            this.receiver = receiver;</span>
-<span class="fc" id="L265">        }</span>
+<span class="nc" id="L262">        public Pairing(Participant sender, Participant receiver) {</span>
+<span class="nc" id="L263">            this.sender = sender;</span>
+<span class="nc" id="L264">            this.receiver = receiver;</span>
+<span class="nc" id="L265">        }</span>
 
         public Participant getSender() {
-<span class="fc" id="L268">            return sender;</span>
+<span class="nc" id="L268">            return sender;</span>
         }
 
         public Participant getReceiver() {
-<span class="fc" id="L272">            return receiver;</span>
+<span class="nc" id="L272">            return receiver;</span>
         }
     }
 
@@ -279,27 +279,27 @@ public class GiftPairingSolution {
     }
 
     // Rule: No self-matching - Person cannot be assigned to themselves
-<span class="fc" id="L282">    public static class SelfMatchingRule implements PairingRule {</span>
+<span class="nc" id="L282">    public static class SelfMatchingRule implements PairingRule {</span>
         @Override
         public boolean isPairingValid(Pairing pairing) {
-<span class="fc bfc" id="L285" title="All 2 branches covered.">            return !pairing.getSender().getId().equals(pairing.getReceiver().getId());</span>
+<span class="nc bnc" id="L285" title="All 2 branches missed.">            return !pairing.getSender().getId().equals(pairing.getReceiver().getId());</span>
         }
     }
 
     // Rule: No immediate family - Family members cannot be matched together
-<span class="fc" id="L290">    public static class FamilyMatchRule implements PairingRule {</span>
+<span class="nc" id="L290">    public static class FamilyMatchRule implements PairingRule {</span>
         @Override
         public boolean isPairingValid(Pairing pairing) {
-<span class="fc" id="L293">            String senderFamily = pairing.getSender().getFamily();</span>
-<span class="fc" id="L294">            String receiverFamily = pairing.getReceiver().getFamily();</span>
+<span class="nc" id="L293">            String senderFamily = pairing.getSender().getFamily();</span>
+<span class="nc" id="L294">            String receiverFamily = pairing.getReceiver().getFamily();</span>
             
             // If either family is null or empty, allow the pairing
-<span class="pc bpc" id="L297" title="1 of 6 branches missed.">            if (senderFamily == null || senderFamily.isEmpty() ||</span>
-<span class="fc bfc" id="L298" title="All 2 branches covered.">                receiverFamily == null || receiverFamily.isEmpty()) {</span>
-<span class="fc" id="L299">                return true;</span>
+<span class="nc bnc" id="L297" title="All 6 branches missed.">            if (senderFamily == null || senderFamily.isEmpty() ||</span>
+<span class="nc bnc" id="L298" title="All 2 branches missed.">                receiverFamily == null || receiverFamily.isEmpty()) {</span>
+<span class="nc" id="L299">                return true;</span>
             }
             
-<span class="fc bfc" id="L302" title="All 2 branches covered.">            return !senderFamily.equals(receiverFamily);</span>
+<span class="nc bnc" id="L302" title="All 2 branches missed.">            return !senderFamily.equals(receiverFamily);</span>
         }
     }
 
@@ -307,40 +307,40 @@ public class GiftPairingSolution {
     public static class RepeatingFromLastYearRule implements PairingRule {
         private List&lt;Pairing&gt; lastYearPairings;
 
-<span class="fc" id="L310">        public RepeatingFromLastYearRule(List&lt;Pairing&gt; lastYearPairings) {</span>
-<span class="fc" id="L311">            this.lastYearPairings = lastYearPairings;</span>
-<span class="fc" id="L312">        }</span>
+<span class="nc" id="L310">        public RepeatingFromLastYearRule(List&lt;Pairing&gt; lastYearPairings) {</span>
+<span class="nc" id="L311">            this.lastYearPairings = lastYearPairings;</span>
+<span class="nc" id="L312">        }</span>
 
         @Override
         public boolean isPairingValid(Pairing pairing) {
-<span class="fc bfc" id="L316" title="All 4 branches covered.">            if (lastYearPairings == null || lastYearPairings.isEmpty()) {</span>
-<span class="fc" id="L317">                return true;</span>
+<span class="nc bnc" id="L316" title="All 4 branches missed.">            if (lastYearPairings == null || lastYearPairings.isEmpty()) {</span>
+<span class="nc" id="L317">                return true;</span>
             }
             
-<span class="fc bfc" id="L320" title="All 2 branches covered.">            for (Pairing lastYearPairing : lastYearPairings) {</span>
-<span class="pc bpc" id="L321" title="1 of 2 branches missed.">                if (lastYearPairing.getSender().getId().equals(pairing.getSender().getId()) &amp;&amp;</span>
-<span class="fc bfc" id="L322" title="All 2 branches covered.">                    lastYearPairing.getReceiver().getId().equals(pairing.getReceiver().getId())) {</span>
-<span class="fc" id="L323">                    return false;</span>
+<span class="nc bnc" id="L320" title="All 2 branches missed.">            for (Pairing lastYearPairing : lastYearPairings) {</span>
+<span class="nc bnc" id="L321" title="All 2 branches missed.">                if (lastYearPairing.getSender().getId().equals(pairing.getSender().getId()) &amp;&amp;</span>
+<span class="nc bnc" id="L322" title="All 2 branches missed.">                    lastYearPairing.getReceiver().getId().equals(pairing.getReceiver().getId())) {</span>
+<span class="nc" id="L323">                    return false;</span>
                 }
-<span class="fc" id="L325">            }</span>
-<span class="fc" id="L326">            return true;</span>
+<span class="nc" id="L325">            }</span>
+<span class="nc" id="L326">            return true;</span>
         }
     }
 
     // Rule: Department restriction - Cannot match people from same team/department
-<span class="fc" id="L331">    public static class DepartmentRule implements PairingRule {</span>
+<span class="nc" id="L331">    public static class DepartmentRule implements PairingRule {</span>
         @Override
         public boolean isPairingValid(Pairing pairing) {
-<span class="fc" id="L334">            String senderDepartment = pairing.getSender().getDepartment();</span>
-<span class="fc" id="L335">            String receiverDepartment = pairing.getReceiver().getDepartment();</span>
+<span class="nc" id="L334">            String senderDepartment = pairing.getSender().getDepartment();</span>
+<span class="nc" id="L335">            String receiverDepartment = pairing.getReceiver().getDepartment();</span>
             
             // If either department is null or empty, allow the pairing
-<span class="pc bpc" id="L338" title="1 of 6 branches missed.">            if (senderDepartment == null || senderDepartment.isEmpty() ||</span>
-<span class="fc bfc" id="L339" title="All 2 branches covered.">                receiverDepartment == null || receiverDepartment.isEmpty()) {</span>
-<span class="fc" id="L340">                return true;</span>
+<span class="nc bnc" id="L338" title="All 6 branches missed.">            if (senderDepartment == null || senderDepartment.isEmpty() ||</span>
+<span class="nc bnc" id="L339" title="All 2 branches missed.">                receiverDepartment == null || receiverDepartment.isEmpty()) {</span>
+<span class="nc" id="L340">                return true;</span>
             }
             
-<span class="fc bfc" id="L343" title="All 2 branches covered.">            return !senderDepartment.equals(receiverDepartment);</span>
+<span class="nc bnc" id="L343" title="All 2 branches missed.">            return !senderDepartment.equals(receiverDepartment);</span>
         }
     }
 
@@ -348,78 +348,78 @@ public class GiftPairingSolution {
     public static class PairingEngine {
         private List&lt;PairingRule&gt; rules;
 
-<span class="fc" id="L351">        public PairingEngine() {</span>
-<span class="fc" id="L352">            this.rules = new ArrayList&lt;&gt;();</span>
-<span class="fc" id="L353">        }</span>
+<span class="nc" id="L351">        public PairingEngine() {</span>
+<span class="nc" id="L352">            this.rules = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L353">        }</span>
 
         public void addRule(PairingRule rule) {
-<span class="pc bpc" id="L356" title="1 of 2 branches missed.">            if (rule != null) {</span>
-<span class="fc" id="L357">                rules.add(rule);</span>
+<span class="nc bnc" id="L356" title="All 2 branches missed.">            if (rule != null) {</span>
+<span class="nc" id="L357">                rules.add(rule);</span>
             }
-<span class="fc" id="L359">        }</span>
+<span class="nc" id="L359">        }</span>
 
         public void removeRule(PairingRule rule) {
-<span class="fc" id="L362">            rules.remove(rule);</span>
-<span class="fc" id="L363">        }</span>
+<span class="nc" id="L362">            rules.remove(rule);</span>
+<span class="nc" id="L363">        }</span>
 
         // Check if a pairing is valid against all rules
         private boolean isValidPairing(Pairing pairing) {
-<span class="fc bfc" id="L367" title="All 2 branches covered.">            for (PairingRule rule : rules) {</span>
-<span class="fc bfc" id="L368" title="All 2 branches covered.">                if (!rule.isPairingValid(pairing)) {</span>
-<span class="fc" id="L369">                    return false;</span>
+<span class="nc bnc" id="L367" title="All 2 branches missed.">            for (PairingRule rule : rules) {</span>
+<span class="nc bnc" id="L368" title="All 2 branches missed.">                if (!rule.isPairingValid(pairing)) {</span>
+<span class="nc" id="L369">                    return false;</span>
                 }
-<span class="fc" id="L371">            }</span>
-<span class="fc" id="L372">            return true;</span>
+<span class="nc" id="L371">            }</span>
+<span class="nc" id="L372">            return true;</span>
         }
 
         // Generate valid pairings for all participants
         public List&lt;Pairing&gt; generatePairingResult(List&lt;Participant&gt; participants) {
-<span class="fc" id="L377">            List&lt;Pairing&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L377">            List&lt;Pairing&gt; result = new ArrayList&lt;&gt;();</span>
             
-<span class="fc bfc" id="L379" title="All 4 branches covered.">            if (participants == null || participants.size() &lt; 2) {</span>
-<span class="fc" id="L380">                return result;</span>
+<span class="nc bnc" id="L379" title="All 4 branches missed.">            if (participants == null || participants.size() &lt; 2) {</span>
+<span class="nc" id="L380">                return result;</span>
             }
 
-<span class="fc" id="L383">            List&lt;Participant&gt; availableReceivers = new ArrayList&lt;&gt;(participants);</span>
-<span class="fc" id="L384">            List&lt;Participant&gt; senders = new ArrayList&lt;&gt;(participants);</span>
+<span class="nc" id="L383">            List&lt;Participant&gt; availableReceivers = new ArrayList&lt;&gt;(participants);</span>
+<span class="nc" id="L384">            List&lt;Participant&gt; senders = new ArrayList&lt;&gt;(participants);</span>
 
             // Try to find valid pairings using backtracking
-<span class="fc bfc" id="L387" title="All 2 branches covered.">            if (findPairings(senders, availableReceivers, result, 0)) {</span>
-<span class="fc" id="L388">                return result;</span>
+<span class="nc bnc" id="L387" title="All 2 branches missed.">            if (findPairings(senders, availableReceivers, result, 0)) {</span>
+<span class="nc" id="L388">                return result;</span>
             }
 
             // If no valid pairing found, return empty list
-<span class="fc" id="L392">            return new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L392">            return new ArrayList&lt;&gt;();</span>
         }
 
         // Backtracking algorithm to find valid pairings
         private boolean findPairings(List&lt;Participant&gt; senders, List&lt;Participant&gt; availableReceivers,
                                       List&lt;Pairing&gt; result, int senderIndex) {
-<span class="fc bfc" id="L398" title="All 2 branches covered.">            if (senderIndex == senders.size()) {</span>
-<span class="fc" id="L399">                return true; // All senders have been paired</span>
+<span class="nc bnc" id="L398" title="All 2 branches missed.">            if (senderIndex == senders.size()) {</span>
+<span class="nc" id="L399">                return true; // All senders have been paired</span>
             }
 
-<span class="fc" id="L402">            Participant sender = senders.get(senderIndex);</span>
+<span class="nc" id="L402">            Participant sender = senders.get(senderIndex);</span>
 
-<span class="fc bfc" id="L404" title="All 2 branches covered.">            for (int i = 0; i &lt; availableReceivers.size(); i++) {</span>
-<span class="fc" id="L405">                Participant receiver = availableReceivers.get(i);</span>
-<span class="fc" id="L406">                Pairing pairing = new Pairing(sender, receiver);</span>
+<span class="nc bnc" id="L404" title="All 2 branches missed.">            for (int i = 0; i &lt; availableReceivers.size(); i++) {</span>
+<span class="nc" id="L405">                Participant receiver = availableReceivers.get(i);</span>
+<span class="nc" id="L406">                Pairing pairing = new Pairing(sender, receiver);</span>
 
-<span class="fc bfc" id="L408" title="All 2 branches covered.">                if (isValidPairing(pairing)) {</span>
-<span class="fc" id="L409">                    result.add(pairing);</span>
-<span class="fc" id="L410">                    availableReceivers.remove(i);</span>
+<span class="nc bnc" id="L408" title="All 2 branches missed.">                if (isValidPairing(pairing)) {</span>
+<span class="nc" id="L409">                    result.add(pairing);</span>
+<span class="nc" id="L410">                    availableReceivers.remove(i);</span>
 
-<span class="fc bfc" id="L412" title="All 2 branches covered.">                    if (findPairings(senders, availableReceivers, result, senderIndex + 1)) {</span>
-<span class="fc" id="L413">                        return true;</span>
+<span class="nc bnc" id="L412" title="All 2 branches missed.">                    if (findPairings(senders, availableReceivers, result, senderIndex + 1)) {</span>
+<span class="nc" id="L413">                        return true;</span>
                     }
 
                     // Backtrack
-<span class="fc" id="L417">                    result.remove(result.size() - 1);</span>
-<span class="fc" id="L418">                    availableReceivers.add(i, receiver);</span>
+<span class="nc" id="L417">                    result.remove(result.size() - 1);</span>
+<span class="nc" id="L418">                    availableReceivers.add(i, receiver);</span>
                 }
             }
 
-<span class="fc" id="L422">            return false; // No valid pairing found for this sender</span>
+<span class="nc" id="L422">            return false; // No valid pairing found for this sender</span>
         }
     }
 }

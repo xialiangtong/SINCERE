@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ShortURLService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">gift-pairing</a> &gt; <a href="index.source.html" class="el_package">default</a> &gt; <span class="el_source">ShortURLService.java</span></div><h1>ShortURLService.java</h1><pre class="source lang-java linenums">import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * URL Shortener Service
+ * Creates short codes for long URLs and resolves them back.
+ */
+public class ShortURLService {
+
+    private static final String BASE_URL = &quot;https://sho.rt/&quot;;
+    private static final String CHARACTERS = &quot;ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789&quot;;
+    private static final int CODE_LENGTH = 6;
+
+    private final URLRepository repository;
+    private final CodeGenerator codeGenerator;
+
+    // Default constructor with in-memory storage
+    public ShortURLService() {
+<span class="fc" id="L22">        this(new InMemoryURLRepository(), new RandomCodeGenerator());</span>
+<span class="fc" id="L23">    }</span>
+
+    // Constructor for dependency injection
+<span class="fc" id="L26">    public ShortURLService(URLRepository repository, CodeGenerator codeGenerator) {</span>
+<span class="fc" id="L27">        this.repository = repository;</span>
+<span class="fc" id="L28">        this.codeGenerator = codeGenerator;</span>
+<span class="fc" id="L29">    }</span>
+
+    /**
+     * Shorten a long URL
+     * @param longUrl the original URL to shorten
+     * @return ShortURLResult containing the short code and full short URL
+     */
+    public ShortURLResult shorten(String longUrl) {
+<span class="fc bfc" id="L37" title="All 4 branches covered.">        if (longUrl == null || longUrl.trim().isEmpty()) {</span>
+<span class="fc" id="L38">            throw new IllegalArgumentException(&quot;URL cannot be null or empty&quot;);</span>
+        }
+
+        // Check if URL already exists
+<span class="fc" id="L42">        String existingCode = repository.findCodeByLongUrl(longUrl);</span>
+<span class="fc bfc" id="L43" title="All 2 branches covered.">        if (existingCode != null) {</span>
+<span class="fc" id="L44">            return new ShortURLResult(existingCode, BASE_URL + existingCode, longUrl);</span>
+        }
+
+        // Generate unique short code
+        String shortCode;
+        do {
+<span class="fc" id="L50">            shortCode = codeGenerator.generate(CODE_LENGTH);</span>
+<span class="pc bpc" id="L51" title="1 of 2 branches missed.">        } while (repository.existsByCode(shortCode));</span>
+
+        // Store the mapping
+<span class="fc" id="L54">        repository.save(shortCode, longUrl);</span>
+
+<span class="fc" id="L56">        return new ShortURLResult(shortCode, BASE_URL + shortCode, longUrl);</span>
+    }
+
+    /**
+     * Resolve a short code to the original URL
+     * @param shortCode the short code to resolve
+     * @return the original long URL
+     * @throws URLNotFoundException if the code doesn't exist
+     */
+    public String resolve(String shortCode) {
+<span class="fc bfc" id="L66" title="All 4 branches covered.">        if (shortCode == null || shortCode.trim().isEmpty()) {</span>
+<span class="fc" id="L67">            throw new IllegalArgumentException(&quot;Short code cannot be null or empty&quot;);</span>
+        }
+
+<span class="fc" id="L70">        String longUrl = repository.findByCode(shortCode);</span>
+<span class="fc bfc" id="L71" title="All 2 branches covered.">        if (longUrl == null) {</span>
+<span class="fc" id="L72">            throw new URLNotFoundException(&quot;Short code not found: &quot; + shortCode);</span>
+        }
+
+<span class="fc" id="L75">        return longUrl;</span>
+    }
+
+    /**
+     * Get the base URL used for short links
+     */
+    public String getBaseUrl() {
+<span class="fc" id="L82">        return BASE_URL;</span>
+    }
+
+    // ==================== Inner Classes ====================
+
+    /**
+     * Result of shortening a URL
+     */
+    public static class ShortURLResult {
+        private final String shortCode;
+        private final String shortUrl;
+        private final String longUrl;
+
+<span class="fc" id="L95">        public ShortURLResult(String shortCode, String shortUrl, String longUrl) {</span>
+<span class="fc" id="L96">            this.shortCode = shortCode;</span>
+<span class="fc" id="L97">            this.shortUrl = shortUrl;</span>
+<span class="fc" id="L98">            this.longUrl = longUrl;</span>
+<span class="fc" id="L99">        }</span>
+
+        public String getShortCode() {
+<span class="fc" id="L102">            return shortCode;</span>
+        }
+
+        public String getShortUrl() {
+<span class="fc" id="L106">            return shortUrl;</span>
+        }
+
+        public String getLongUrl() {
+<span class="fc" id="L110">            return longUrl;</span>
+        }
+    }
+
+    /**
+     * Exception for when a URL is not found
+     */
+    public static class URLNotFoundException extends RuntimeException {
+        public URLNotFoundException(String message) {
+<span class="fc" id="L119">            super(message);</span>
+<span class="fc" id="L120">        }</span>
+    }
+
+    /**
+     * Interface for URL storage
+     */
+    public interface URLRepository {
+        void save(String shortCode, String longUrl);
+        String findByCode(String shortCode);
+        String findCodeByLongUrl(String longUrl);
+        boolean existsByCode(String shortCode);
+    }
+
+    /**
+     * Interface for code generation
+     */
+    public interface CodeGenerator {
+        String generate(int length);
+    }
+
+    /**
+     * In-memory implementation of URLRepository
+     */
+<span class="fc" id="L143">    public static class InMemoryURLRepository implements URLRepository {</span>
+<span class="fc" id="L144">        private final Map&lt;String, String&gt; codeToUrl = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L145">        private final Map&lt;String, String&gt; urlToCode = new HashMap&lt;&gt;();</span>
+
+        @Override
+        public void save(String shortCode, String longUrl) {
+<span class="fc" id="L149">            codeToUrl.put(shortCode, longUrl);</span>
+<span class="fc" id="L150">            urlToCode.put(longUrl, shortCode);</span>
+<span class="fc" id="L151">        }</span>
+
+        @Override
+        public String findByCode(String shortCode) {
+<span class="fc" id="L155">            return codeToUrl.get(shortCode);</span>
+        }
+
+        @Override
+        public String findCodeByLongUrl(String longUrl) {
+<span class="fc" id="L160">            return urlToCode.get(longUrl);</span>
+        }
+
+        @Override
+        public boolean existsByCode(String shortCode) {
+<span class="fc" id="L165">            return codeToUrl.containsKey(shortCode);</span>
+        }
+    }
+
+    /**
+     * Random code generator using SecureRandom
+     */
+<span class="fc" id="L172">    public static class RandomCodeGenerator implements CodeGenerator {</span>
+<span class="fc" id="L173">        private final SecureRandom random = new SecureRandom();</span>
+
+        @Override
+        public String generate(int length) {
+<span class="fc" id="L177">            StringBuilder sb = new StringBuilder(length);</span>
+<span class="fc bfc" id="L178" title="All 2 branches covered.">            for (int i = 0; i &lt; length; i++) {</span>
+<span class="fc" id="L179">                int index = random.nextInt(CHARACTERS.length());</span>
+<span class="fc" id="L180">                sb.append(CHARACTERS.charAt(index));</span>
+            }
+<span class="fc" id="L182">            return sb.toString();</span>
+        }
+    }
+
+    /**
+     * MD5-based code generator
+     * Generates deterministic codes based on input string's MD5 hash
+     */
+    public static class MD5Generator implements CodeGenerator {
+        private String input;
+
+<span class="fc" id="L193">        public MD5Generator() {</span>
+<span class="fc" id="L194">            this.input = &quot;&quot;;</span>
+<span class="fc" id="L195">        }</span>
+
+<span class="fc" id="L197">        public MD5Generator(String input) {</span>
+<span class="fc bfc" id="L198" title="All 2 branches covered.">            this.input = input != null ? input : &quot;&quot;;</span>
+<span class="fc" id="L199">        }</span>
+
+        public void setInput(String input) {
+<span class="fc bfc" id="L202" title="All 2 branches covered.">            this.input = input != null ? input : &quot;&quot;;</span>
+<span class="fc" id="L203">        }</span>
+
+        public String getInput() {
+<span class="fc" id="L206">            return input;</span>
+        }
+
+        @Override
+        public String generate(int length) {
+            try {
+<span class="fc" id="L212">                MessageDigest md = MessageDigest.getInstance(&quot;MD5&quot;);</span>
+<span class="fc" id="L213">                byte[] hashBytes = md.digest(input.getBytes());</span>
+                
+                // Convert hash bytes to base62 string
+<span class="fc" id="L216">                StringBuilder sb = new StringBuilder();</span>
+<span class="fc bfc" id="L217" title="All 2 branches covered.">                for (byte b : hashBytes) {</span>
+<span class="fc" id="L218">                    int unsignedByte = b &amp; 0xFF;</span>
+<span class="fc" id="L219">                    sb.append(CHARACTERS.charAt(unsignedByte % CHARACTERS.length()));</span>
+<span class="fc bfc" id="L220" title="All 2 branches covered.">                    if (sb.length() &gt;= length) {</span>
+<span class="fc" id="L221">                        break;</span>
+                    }
+                }
+                
+                // Ensure we have enough characters
+<span class="fc bfc" id="L226" title="All 2 branches covered.">                while (sb.length() &lt; length) {</span>
+<span class="fc" id="L227">                    sb.append(CHARACTERS.charAt(0));</span>
+                }
+                
+<span class="fc" id="L230">                return sb.substring(0, length);</span>
+<span class="nc" id="L231">            } catch (NoSuchAlgorithmException e) {</span>
+<span class="nc" id="L232">                throw new RuntimeException(&quot;MD5 algorithm not available&quot;, e);</span>
+            }
+        }
+
+        /**
+         * Generate code directly from a URL string
+         */
+        public String generateFromUrl(String url) {
+<span class="fc" id="L240">            setInput(url);</span>
+<span class="fc" id="L241">            return generate(CODE_LENGTH);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

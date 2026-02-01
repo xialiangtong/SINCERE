@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
-Test set: GiftPairingSolutionTest
+Test set: ShortURLServiceTest
 -------------------------------------------------------------------------------
-Tests run: 56, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.122 s -- in GiftPairingSolutionTest
+Tests run: 36, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.049 s -- in ShortURLServiceTest
