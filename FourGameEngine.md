@@ -60,3 +60,67 @@ Any contiguous sequence of 4 of the same player
 Performance expectation:
 
 Efficient check based on the last move (preferred), rather than scanning entire board every time.
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                          ConnectFour                                 │
+├─────────────────────────────────────────────────────────────────────┤
+│ - width: int                                                         │
+│ - height: int                                                        │
+│ - winLength: int                                                     │
+│ - board: Player[][]                                                  │
+│ - currentPlayer: Player                                              │
+│ - status: GameStatus                                                 │
+│ - movesCount: int                                                    │
+├─────────────────────────────────────────────────────────────────────┤
+│ + ConnectFour()                          // Default 7x6              │
+│ + ConnectFour(width, height, winLength)  // Custom                   │
+│                                                                      │
+│ + dropDisc(column: int): DropResult      // Main action              │
+│ + getCell(row, col): Player              // Query cell               │
+│ + getStatus(): GameStatus                // Game state               │
+│ + getCurrentPlayer(): Player             // Whose turn               │
+│ + isGameOver(): boolean                                              │
+│ + reset(): void                                                      │
+│ + getBoardString(): String               // Debug display            │
+│                                                                      │
+│ - findLowestEmptyRow(column): int                                    │
+│ - checkWin(row, col): boolean                                        │
+│ - countDirection(row, col, dRow, dCol, player): int                  │
+│ - countInDirection(row, col, dRow, dCol, player): int                │
+│                                                                      │
+│ + static newGame(): ConnectFour                                      │
+│ + static newGame(width, height): ConnectFour                         │
+└─────────────────────────────────────────────────────────────────────┘
+                │
+                │ uses
+                ▼
+┌───────────────────────────────────────────────────────────────────┐
+│                                                                    │
+│  ┌─────────────┐    ┌──────────────┐    ┌─────────────┐           │
+│  │   Player    │    │  GameStatus  │    │ MoveResult  │           │
+│  │   (enum)    │    │   (enum)     │    │  (enum)     │           │
+│  ├─────────────┤    ├──────────────┤    ├─────────────┤           │
+│  │ NONE        │    │ IN_PROGRESS  │    │ SUCCESS     │           │
+│  │ PLAYER_1    │    │ PLAYER_1_WINS│    │INVALID_COLUMN│          │
+│  │ PLAYER_2    │    │ PLAYER_2_WINS│    │ COLUMN_FULL │           │
+│  ├─────────────┤    │ DRAW         │    │ GAME_OVER   │           │
+│  │ +opponent() │    └──────────────┘    └─────────────┘           │
+│  └─────────────┘                                                   │
+│                                                                    │
+└───────────────────────────────────────────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                          DropResult                                  │
+├─────────────────────────────────────────────────────────────────────┤
+│ - result: MoveResult                                                 │
+│ - row: int                    // Where disc landed (-1 if failed)    │
+│ - status: GameStatus          // Updated game status                 │
+├─────────────────────────────────────────────────────────────────────┤
+│ + static success(row, status): DropResult                            │
+│ + static failure(result, status): DropResult                         │
+│ + getResult(): MoveResult                                            │
+│ + getRow(): int                                                      │
+│ + getStatus(): GameStatus                                            │
+│ + isSuccess(): boolean                                               │
+└─────────────────────────────────────────────────────────────────────┘

@@ -118,3 +118,65 @@ retry_after_ms = ceil(need / refill_rate_tokens_per_ms)
 
 Pros: smooth limiting, less boundary burst
 Cons: slightly more math 
+
+
+┌─────────────────────────────────────────────────────────────────┐
+│                         RateLimiter                              │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │ - strategy: Strategy                                       │  │
+│  │                                                            │  │
+│  │ + allow(key: String): Decision                             │  │
+│  │ + tryAcquire(key: String, permits: int): Decision          │  │
+│  │                                                            │  │
+│  │ + static fixedWindow(maxRequests, windowSizeMs)            │  │
+│  │ + static tokenBucket(capacity, refillTokens, refillPeriodMs)│ │
+│  └───────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              │ uses
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    <<interface>> Strategy                        │
+│  ─────────────────────────────────────────────────────────────  │
+│  + allow(key: String): Decision                                  │
+│  + tryAcquire(key: String, permits: int): Decision               │
+└─────────────────────────────────────────────────────────────────┘
+                              △
+                              │ implements
+              ┌───────────────┴───────────────┐
+              │                               │
+              ▼                               ▼
+┌─────────────────────────┐     ┌─────────────────────────┐
+│  FixedWindowStrategy    │     │  TokenBucketStrategy    │
+├─────────────────────────┤     ├─────────────────────────┤
+│ - maxRequests: int      │     │ - capacity: int         │
+│ - windowSizeMs: long    │     │ - refillRatePerMs: double│
+│ - states: Map<String,   │     │ - states: Map<String,   │
+│            WindowState> │     │            BucketState> │
+├─────────────────────────┤     ├─────────────────────────┤
+│ + allow(key)            │     │ + allow(key)            │
+│ + tryAcquire(key, n)    │     │ + tryAcquire(key, n)    │
+└─────────────────────────┘     └─────────────────────────┘
+              │                               │
+              ▼                               ▼
+┌─────────────────────────┐     ┌─────────────────────────┐
+│     WindowState         │     │     BucketState         │
+├─────────────────────────┤     ├─────────────────────────┤
+│ - windowStart: long     │     │ - tokens: double        │
+│ - count: int            │     │ - lastRefillMs: long    │
+└─────────────────────────┘     └─────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────┐
+│                          Decision                                │
+├─────────────────────────────────────────────────────────────────┤
+│ - allowed: boolean                                               │
+│ - retryAfterMs: long                                             │
+│ - remaining: int                                                 │
+├─────────────────────────────────────────────────────────────────┤
+│ + static allow(remaining: int): Decision                         │
+│ + static reject(retryAfterMs: long): Decision                    │
+│ + isAllowed(): boolean                                           │
+│ + getRetryAfterMs(): long                                        │
+│ + getRemaining(): int                                            │
+└─────────────────────────────────────────────────────────────────┘
