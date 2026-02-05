@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ShortURLService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">gift-pairing</a> &gt; <a href="index.source.html" class="el_package">default</a> &gt; <span class="el_source">ShortURLService.java</span></div><h1>ShortURLService.java</h1><pre class="source lang-java linenums">import java.security.MessageDigest;
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ShortURLService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sincere</a> &gt; <a href="index.source.html" class="el_package">default</a> &gt; <span class="el_source">ShortURLService.java</span></div><h1>ShortURLService.java</h1><pre class="source lang-java linenums">import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.HashMap;
@@ -19,14 +19,14 @@ public class ShortURLService {
 
     // Default constructor with in-memory storage
     public ShortURLService() {
-<span class="fc" id="L22">        this(new InMemoryURLRepository(), new RandomCodeGenerator());</span>
-<span class="fc" id="L23">    }</span>
+<span class="nc" id="L22">        this(new InMemoryURLRepository(), new RandomCodeGenerator());</span>
+<span class="nc" id="L23">    }</span>
 
     // Constructor for dependency injection
-<span class="fc" id="L26">    public ShortURLService(URLRepository repository, CodeGenerator codeGenerator) {</span>
-<span class="fc" id="L27">        this.repository = repository;</span>
-<span class="fc" id="L28">        this.codeGenerator = codeGenerator;</span>
-<span class="fc" id="L29">    }</span>
+<span class="nc" id="L26">    public ShortURLService(URLRepository repository, CodeGenerator codeGenerator) {</span>
+<span class="nc" id="L27">        this.repository = repository;</span>
+<span class="nc" id="L28">        this.codeGenerator = codeGenerator;</span>
+<span class="nc" id="L29">    }</span>
 
     /**
      * Shorten a long URL
@@ -34,26 +34,26 @@ public class ShortURLService {
      * @return ShortURLResult containing the short code and full short URL
      */
     public ShortURLResult shorten(String longUrl) {
-<span class="fc bfc" id="L37" title="All 4 branches covered.">        if (longUrl == null || longUrl.trim().isEmpty()) {</span>
-<span class="fc" id="L38">            throw new IllegalArgumentException(&quot;URL cannot be null or empty&quot;);</span>
+<span class="nc bnc" id="L37" title="All 4 branches missed.">        if (longUrl == null || longUrl.trim().isEmpty()) {</span>
+<span class="nc" id="L38">            throw new IllegalArgumentException(&quot;URL cannot be null or empty&quot;);</span>
         }
 
         // Check if URL already exists
-<span class="fc" id="L42">        String existingCode = repository.findCodeByLongUrl(longUrl);</span>
-<span class="fc bfc" id="L43" title="All 2 branches covered.">        if (existingCode != null) {</span>
-<span class="fc" id="L44">            return new ShortURLResult(existingCode, BASE_URL + existingCode, longUrl);</span>
+<span class="nc" id="L42">        String existingCode = repository.findCodeByLongUrl(longUrl);</span>
+<span class="nc bnc" id="L43" title="All 2 branches missed.">        if (existingCode != null) {</span>
+<span class="nc" id="L44">            return new ShortURLResult(existingCode, BASE_URL + existingCode, longUrl);</span>
         }
 
         // Generate unique short code
         String shortCode;
         do {
-<span class="fc" id="L50">            shortCode = codeGenerator.generate(CODE_LENGTH);</span>
-<span class="pc bpc" id="L51" title="1 of 2 branches missed.">        } while (repository.existsByCode(shortCode));</span>
+<span class="nc" id="L50">            shortCode = codeGenerator.generate(CODE_LENGTH);</span>
+<span class="nc bnc" id="L51" title="All 2 branches missed.">        } while (repository.existsByCode(shortCode));</span>
 
         // Store the mapping
-<span class="fc" id="L54">        repository.save(shortCode, longUrl);</span>
+<span class="nc" id="L54">        repository.save(shortCode, longUrl);</span>
 
-<span class="fc" id="L56">        return new ShortURLResult(shortCode, BASE_URL + shortCode, longUrl);</span>
+<span class="nc" id="L56">        return new ShortURLResult(shortCode, BASE_URL + shortCode, longUrl);</span>
     }
 
     /**
@@ -63,23 +63,23 @@ public class ShortURLService {
      * @throws URLNotFoundException if the code doesn't exist
      */
     public String resolve(String shortCode) {
-<span class="fc bfc" id="L66" title="All 4 branches covered.">        if (shortCode == null || shortCode.trim().isEmpty()) {</span>
-<span class="fc" id="L67">            throw new IllegalArgumentException(&quot;Short code cannot be null or empty&quot;);</span>
+<span class="nc bnc" id="L66" title="All 4 branches missed.">        if (shortCode == null || shortCode.trim().isEmpty()) {</span>
+<span class="nc" id="L67">            throw new IllegalArgumentException(&quot;Short code cannot be null or empty&quot;);</span>
         }
 
-<span class="fc" id="L70">        String longUrl = repository.findByCode(shortCode);</span>
-<span class="fc bfc" id="L71" title="All 2 branches covered.">        if (longUrl == null) {</span>
-<span class="fc" id="L72">            throw new URLNotFoundException(&quot;Short code not found: &quot; + shortCode);</span>
+<span class="nc" id="L70">        String longUrl = repository.findByCode(shortCode);</span>
+<span class="nc bnc" id="L71" title="All 2 branches missed.">        if (longUrl == null) {</span>
+<span class="nc" id="L72">            throw new URLNotFoundException(&quot;Short code not found: &quot; + shortCode);</span>
         }
 
-<span class="fc" id="L75">        return longUrl;</span>
+<span class="nc" id="L75">        return longUrl;</span>
     }
 
     /**
      * Get the base URL used for short links
      */
     public String getBaseUrl() {
-<span class="fc" id="L82">        return BASE_URL;</span>
+<span class="nc" id="L82">        return BASE_URL;</span>
     }
 
     // ==================== Inner Classes ====================
@@ -92,22 +92,22 @@ public class ShortURLService {
         private final String shortUrl;
         private final String longUrl;
 
-<span class="fc" id="L95">        public ShortURLResult(String shortCode, String shortUrl, String longUrl) {</span>
-<span class="fc" id="L96">            this.shortCode = shortCode;</span>
-<span class="fc" id="L97">            this.shortUrl = shortUrl;</span>
-<span class="fc" id="L98">            this.longUrl = longUrl;</span>
-<span class="fc" id="L99">        }</span>
+<span class="nc" id="L95">        public ShortURLResult(String shortCode, String shortUrl, String longUrl) {</span>
+<span class="nc" id="L96">            this.shortCode = shortCode;</span>
+<span class="nc" id="L97">            this.shortUrl = shortUrl;</span>
+<span class="nc" id="L98">            this.longUrl = longUrl;</span>
+<span class="nc" id="L99">        }</span>
 
         public String getShortCode() {
-<span class="fc" id="L102">            return shortCode;</span>
+<span class="nc" id="L102">            return shortCode;</span>
         }
 
         public String getShortUrl() {
-<span class="fc" id="L106">            return shortUrl;</span>
+<span class="nc" id="L106">            return shortUrl;</span>
         }
 
         public String getLongUrl() {
-<span class="fc" id="L110">            return longUrl;</span>
+<span class="nc" id="L110">            return longUrl;</span>
         }
     }
 
@@ -116,8 +116,8 @@ public class ShortURLService {
      */
     public static class URLNotFoundException extends RuntimeException {
         public URLNotFoundException(String message) {
-<span class="fc" id="L119">            super(message);</span>
-<span class="fc" id="L120">        }</span>
+<span class="nc" id="L119">            super(message);</span>
+<span class="nc" id="L120">        }</span>
     }
 
     /**
@@ -140,46 +140,46 @@ public class ShortURLService {
     /**
      * In-memory implementation of URLRepository
      */
-<span class="fc" id="L143">    public static class InMemoryURLRepository implements URLRepository {</span>
-<span class="fc" id="L144">        private final Map&lt;String, String&gt; codeToUrl = new HashMap&lt;&gt;();</span>
-<span class="fc" id="L145">        private final Map&lt;String, String&gt; urlToCode = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L143">    public static class InMemoryURLRepository implements URLRepository {</span>
+<span class="nc" id="L144">        private final Map&lt;String, String&gt; codeToUrl = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L145">        private final Map&lt;String, String&gt; urlToCode = new HashMap&lt;&gt;();</span>
 
         @Override
         public void save(String shortCode, String longUrl) {
-<span class="fc" id="L149">            codeToUrl.put(shortCode, longUrl);</span>
-<span class="fc" id="L150">            urlToCode.put(longUrl, shortCode);</span>
-<span class="fc" id="L151">        }</span>
+<span class="nc" id="L149">            codeToUrl.put(shortCode, longUrl);</span>
+<span class="nc" id="L150">            urlToCode.put(longUrl, shortCode);</span>
+<span class="nc" id="L151">        }</span>
 
         @Override
         public String findByCode(String shortCode) {
-<span class="fc" id="L155">            return codeToUrl.get(shortCode);</span>
+<span class="nc" id="L155">            return codeToUrl.get(shortCode);</span>
         }
 
         @Override
         public String findCodeByLongUrl(String longUrl) {
-<span class="fc" id="L160">            return urlToCode.get(longUrl);</span>
+<span class="nc" id="L160">            return urlToCode.get(longUrl);</span>
         }
 
         @Override
         public boolean existsByCode(String shortCode) {
-<span class="fc" id="L165">            return codeToUrl.containsKey(shortCode);</span>
+<span class="nc" id="L165">            return codeToUrl.containsKey(shortCode);</span>
         }
     }
 
     /**
      * Random code generator using SecureRandom
      */
-<span class="fc" id="L172">    public static class RandomCodeGenerator implements CodeGenerator {</span>
-<span class="fc" id="L173">        private final SecureRandom random = new SecureRandom();</span>
+<span class="nc" id="L172">    public static class RandomCodeGenerator implements CodeGenerator {</span>
+<span class="nc" id="L173">        private final SecureRandom random = new SecureRandom();</span>
 
         @Override
         public String generate(int length) {
-<span class="fc" id="L177">            StringBuilder sb = new StringBuilder(length);</span>
-<span class="fc bfc" id="L178" title="All 2 branches covered.">            for (int i = 0; i &lt; length; i++) {</span>
-<span class="fc" id="L179">                int index = random.nextInt(CHARACTERS.length());</span>
-<span class="fc" id="L180">                sb.append(CHARACTERS.charAt(index));</span>
+<span class="nc" id="L177">            StringBuilder sb = new StringBuilder(length);</span>
+<span class="nc bnc" id="L178" title="All 2 branches missed.">            for (int i = 0; i &lt; length; i++) {</span>
+<span class="nc" id="L179">                int index = random.nextInt(CHARACTERS.length());</span>
+<span class="nc" id="L180">                sb.append(CHARACTERS.charAt(index));</span>
             }
-<span class="fc" id="L182">            return sb.toString();</span>
+<span class="nc" id="L182">            return sb.toString();</span>
         }
     }
 
@@ -190,44 +190,44 @@ public class ShortURLService {
     public static class MD5Generator implements CodeGenerator {
         private String input;
 
-<span class="fc" id="L193">        public MD5Generator() {</span>
-<span class="fc" id="L194">            this.input = &quot;&quot;;</span>
-<span class="fc" id="L195">        }</span>
+<span class="nc" id="L193">        public MD5Generator() {</span>
+<span class="nc" id="L194">            this.input = &quot;&quot;;</span>
+<span class="nc" id="L195">        }</span>
 
-<span class="fc" id="L197">        public MD5Generator(String input) {</span>
-<span class="fc bfc" id="L198" title="All 2 branches covered.">            this.input = input != null ? input : &quot;&quot;;</span>
-<span class="fc" id="L199">        }</span>
+<span class="nc" id="L197">        public MD5Generator(String input) {</span>
+<span class="nc bnc" id="L198" title="All 2 branches missed.">            this.input = input != null ? input : &quot;&quot;;</span>
+<span class="nc" id="L199">        }</span>
 
         public void setInput(String input) {
-<span class="fc bfc" id="L202" title="All 2 branches covered.">            this.input = input != null ? input : &quot;&quot;;</span>
-<span class="fc" id="L203">        }</span>
+<span class="nc bnc" id="L202" title="All 2 branches missed.">            this.input = input != null ? input : &quot;&quot;;</span>
+<span class="nc" id="L203">        }</span>
 
         public String getInput() {
-<span class="fc" id="L206">            return input;</span>
+<span class="nc" id="L206">            return input;</span>
         }
 
         @Override
         public String generate(int length) {
             try {
-<span class="fc" id="L212">                MessageDigest md = MessageDigest.getInstance(&quot;MD5&quot;);</span>
-<span class="fc" id="L213">                byte[] hashBytes = md.digest(input.getBytes());</span>
+<span class="nc" id="L212">                MessageDigest md = MessageDigest.getInstance(&quot;MD5&quot;);</span>
+<span class="nc" id="L213">                byte[] hashBytes = md.digest(input.getBytes());</span>
                 
                 // Convert hash bytes to base62 string
-<span class="fc" id="L216">                StringBuilder sb = new StringBuilder();</span>
-<span class="fc bfc" id="L217" title="All 2 branches covered.">                for (byte b : hashBytes) {</span>
-<span class="fc" id="L218">                    int unsignedByte = b &amp; 0xFF;</span>
-<span class="fc" id="L219">                    sb.append(CHARACTERS.charAt(unsignedByte % CHARACTERS.length()));</span>
-<span class="fc bfc" id="L220" title="All 2 branches covered.">                    if (sb.length() &gt;= length) {</span>
-<span class="fc" id="L221">                        break;</span>
+<span class="nc" id="L216">                StringBuilder sb = new StringBuilder();</span>
+<span class="nc bnc" id="L217" title="All 2 branches missed.">                for (byte b : hashBytes) {</span>
+<span class="nc" id="L218">                    int unsignedByte = b &amp; 0xFF;</span>
+<span class="nc" id="L219">                    sb.append(CHARACTERS.charAt(unsignedByte % CHARACTERS.length()));</span>
+<span class="nc bnc" id="L220" title="All 2 branches missed.">                    if (sb.length() &gt;= length) {</span>
+<span class="nc" id="L221">                        break;</span>
                     }
                 }
                 
                 // Ensure we have enough characters
-<span class="fc bfc" id="L226" title="All 2 branches covered.">                while (sb.length() &lt; length) {</span>
-<span class="fc" id="L227">                    sb.append(CHARACTERS.charAt(0));</span>
+<span class="nc bnc" id="L226" title="All 2 branches missed.">                while (sb.length() &lt; length) {</span>
+<span class="nc" id="L227">                    sb.append(CHARACTERS.charAt(0));</span>
                 }
                 
-<span class="fc" id="L230">                return sb.substring(0, length);</span>
+<span class="nc" id="L230">                return sb.substring(0, length);</span>
 <span class="nc" id="L231">            } catch (NoSuchAlgorithmException e) {</span>
 <span class="nc" id="L232">                throw new RuntimeException(&quot;MD5 algorithm not available&quot;, e);</span>
             }
@@ -237,8 +237,8 @@ public class ShortURLService {
          * Generate code directly from a URL string
          */
         public String generateFromUrl(String url) {
-<span class="fc" id="L240">            setInput(url);</span>
-<span class="fc" id="L241">            return generate(CODE_LENGTH);</span>
+<span class="nc" id="L240">            setInput(url);</span>
+<span class="nc" id="L241">            return generate(CODE_LENGTH);</span>
         }
     }
 }

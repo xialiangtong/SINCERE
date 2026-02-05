@@ -1,0 +1,781 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CartPricing.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sincere</a> &gt; <a href="index.source.html" class="el_package">default</a> &gt; <span class="el_source">CartPricing.java</span></div><h1>CartPricing.java</h1><pre class="source lang-java linenums">import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * Cart Pricing Engine
+ * 
+ * Computes order total from cart items, discounts/promotions,
+ * shipping rules, and taxes.
+ */
+<span class="nc" id="L12">public class CartPricing {</span>
+
+    // ==================== DATA MODEL ====================
+
+    /**
+     * Represents an item in the shopping cart.
+     */
+    public static class CartItem {
+        private final String sku;
+        private final BigDecimal unitPrice;
+        private final int quantity;
+
+<span class="nc" id="L24">        public CartItem(String sku, BigDecimal unitPrice, int quantity) {</span>
+<span class="nc bnc" id="L25" title="All 2 branches missed.">            if (quantity &lt;= 0) {</span>
+<span class="nc" id="L26">                throw new IllegalArgumentException(&quot;Quantity must be &gt; 0&quot;);</span>
+            }
+<span class="nc bnc" id="L28" title="All 2 branches missed.">            if (unitPrice.compareTo(BigDecimal.ZERO) &lt; 0) {</span>
+<span class="nc" id="L29">                throw new IllegalArgumentException(&quot;Unit price must be &gt;= 0&quot;);</span>
+            }
+<span class="nc" id="L31">            this.sku = sku.trim();</span>
+<span class="nc" id="L32">            this.unitPrice = unitPrice;</span>
+<span class="nc" id="L33">            this.quantity = quantity;</span>
+<span class="nc" id="L34">        }</span>
+
+        public CartItem(String sku, String unitPrice, int quantity) {
+<span class="nc" id="L37">            this(sku, new BigDecimal(unitPrice), quantity);</span>
+<span class="nc" id="L38">        }</span>
+
+<span class="nc" id="L40">        public String getSku() { return sku; }</span>
+<span class="nc" id="L41">        public BigDecimal getUnitPrice() { return unitPrice; }</span>
+<span class="nc" id="L42">        public int getQuantity() { return quantity; }</span>
+
+        public BigDecimal getLineSubtotal() {
+<span class="nc" id="L45">            return unitPrice.multiply(BigDecimal.valueOf(quantity));</span>
+        }
+    }
+
+    /**
+     * Shipping address.
+     */
+    public static class ShippingAddress {
+        private final String country;
+        private final String state;
+        private final String zip;
+
+<span class="nc" id="L57">        public ShippingAddress(String country, String state, String zip) {</span>
+<span class="nc" id="L58">            this.country = country;</span>
+<span class="nc" id="L59">            this.state = state;</span>
+<span class="nc" id="L60">            this.zip = zip;</span>
+<span class="nc" id="L61">        }</span>
+
+<span class="nc" id="L63">        public String getCountry() { return country; }</span>
+<span class="nc" id="L64">        public String getState() { return state; }</span>
+<span class="nc" id="L65">        public String getZip() { return zip; }</span>
+    }
+
+    /**
+     * Shopping cart containing items and shipping info.
+     */
+    public static class Cart {
+        private final List&lt;CartItem&gt; items;
+        private final ShippingAddress address;
+
+<span class="nc" id="L75">        public Cart(List&lt;CartItem&gt; items, ShippingAddress address) {</span>
+<span class="nc" id="L76">            this.items = new ArrayList&lt;&gt;(items);</span>
+<span class="nc" id="L77">            this.address = address;</span>
+<span class="nc" id="L78">        }</span>
+
+<span class="nc" id="L80">        public List&lt;CartItem&gt; getItems() { return Collections.unmodifiableList(items); }</span>
+<span class="nc" id="L81">        public ShippingAddress getAddress() { return address; }</span>
+
+        public BigDecimal getSubtotal() {
+<span class="nc" id="L84">            return items.stream()</span>
+<span class="nc" id="L85">                    .map(CartItem::getLineSubtotal)</span>
+<span class="nc" id="L86">                    .reduce(BigDecimal.ZERO, BigDecimal::add);</span>
+        }
+
+        public int getQuantityForSku(String sku) {
+<span class="nc" id="L90">            return items.stream()</span>
+<span class="nc" id="L91">                    .filter(i -&gt; i.getSku().equals(sku))</span>
+<span class="nc" id="L92">                    .mapToInt(CartItem::getQuantity)</span>
+<span class="nc" id="L93">                    .sum();</span>
+        }
+    }
+
+    // ==================== PROMOTION TYPES ====================
+
+    /**
+     * Promotion type enum.
+     */
+<span class="nc" id="L102">    public enum PromotionType {</span>
+<span class="nc" id="L103">        PERCENT_OFF_CART,</span>
+<span class="nc" id="L104">        FIXED_OFF_CART,</span>
+<span class="nc" id="L105">        PERCENT_OFF_SKU,</span>
+<span class="nc" id="L106">        BUY_X_GET_Y,</span>
+<span class="nc" id="L107">        TIERED_SPEND,</span>
+<span class="nc" id="L108">        TIERED_QUANTITY</span>
+    }
+
+    /**
+     * Applied discount record.
+     */
+    public static class AppliedDiscount {
+        private final PromotionType type;
+        private final String sku;  // nullable for cart-wide
+        private final String value;
+        private final BigDecimal amount;
+
+<span class="nc" id="L120">        public AppliedDiscount(PromotionType type, String sku, String value, BigDecimal amount) {</span>
+<span class="nc" id="L121">            this.type = type;</span>
+<span class="nc" id="L122">            this.sku = sku;</span>
+<span class="nc" id="L123">            this.value = value;</span>
+<span class="nc" id="L124">            this.amount = amount.setScale(2, RoundingMode.HALF_UP);</span>
+<span class="nc" id="L125">        }</span>
+
+<span class="nc" id="L127">        public PromotionType getType() { return type; }</span>
+<span class="nc" id="L128">        public String getSku() { return sku; }</span>
+<span class="nc" id="L129">        public String getValue() { return value; }</span>
+<span class="nc" id="L130">        public BigDecimal getAmount() { return amount; }</span>
+
+        @Override
+        public String toString() {
+<span class="nc" id="L134">            StringBuilder sb = new StringBuilder();</span>
+<span class="nc" id="L135">            sb.append(&quot;{\&quot;type\&quot;:\&quot;&quot;).append(type).append(&quot;\&quot;&quot;);</span>
+<span class="nc bnc" id="L136" title="All 2 branches missed.">            if (sku != null) sb.append(&quot;,\&quot;sku\&quot;:\&quot;&quot;).append(sku).append(&quot;\&quot;&quot;);</span>
+<span class="nc" id="L137">            sb.append(&quot;,\&quot;value\&quot;:\&quot;&quot;).append(value).append(&quot;\&quot;&quot;);</span>
+<span class="nc" id="L138">            sb.append(&quot;,\&quot;amount\&quot;:\&quot;&quot;).append(amount).append(&quot;\&quot;}&quot;);</span>
+<span class="nc" id="L139">            return sb.toString();</span>
+        }
+    }
+
+    /**
+     * Mutable cart state used during discount calculation.
+     */
+    public static class CartState {
+        private final Cart cart;
+        private final Map&lt;String, BigDecimal&gt; lineDiscounts;  // sku -&gt; discount amount
+        private BigDecimal cartDiscount;
+        private final List&lt;AppliedDiscount&gt; appliedDiscounts;
+
+<span class="nc" id="L152">        public CartState(Cart cart) {</span>
+<span class="nc" id="L153">            this.cart = cart;</span>
+<span class="nc" id="L154">            this.lineDiscounts = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L155">            this.cartDiscount = BigDecimal.ZERO;</span>
+<span class="nc" id="L156">            this.appliedDiscounts = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L157">        }</span>
+
+<span class="nc" id="L159">        public Cart getCart() { return cart; }</span>
+        
+        public BigDecimal getLineDiscount(String sku) {
+<span class="nc" id="L162">            return lineDiscounts.getOrDefault(sku, BigDecimal.ZERO);</span>
+        }
+
+        public void addLineDiscount(String sku, BigDecimal amount) {
+<span class="nc" id="L166">            lineDiscounts.merge(sku, amount, BigDecimal::add);</span>
+<span class="nc" id="L167">        }</span>
+
+<span class="nc" id="L169">        public BigDecimal getCartDiscount() { return cartDiscount; }</span>
+
+        public void addCartDiscount(BigDecimal amount) {
+<span class="nc" id="L172">            cartDiscount = cartDiscount.add(amount);</span>
+<span class="nc" id="L173">        }</span>
+
+        public void addAppliedDiscount(AppliedDiscount discount) {
+<span class="nc" id="L176">            appliedDiscounts.add(discount);</span>
+<span class="nc" id="L177">        }</span>
+
+<span class="nc" id="L179">        public List&lt;AppliedDiscount&gt; getAppliedDiscounts() { return appliedDiscounts; }</span>
+
+        public BigDecimal getTotalDiscount() {
+<span class="nc" id="L182">            BigDecimal lineTotal = lineDiscounts.values().stream()</span>
+<span class="nc" id="L183">                    .reduce(BigDecimal.ZERO, BigDecimal::add);</span>
+<span class="nc" id="L184">            return lineTotal.add(cartDiscount);</span>
+        }
+
+        public BigDecimal getDiscountedSubtotal() {
+<span class="nc" id="L188">            return cart.getSubtotal().subtract(getTotalDiscount()).max(BigDecimal.ZERO);</span>
+        }
+    }
+
+    /**
+     * Promotion interface.
+     */
+    public interface Promotion {
+        void apply(CartState state);
+        PromotionType getType();
+        int getPriority();  // Lower = applied first
+    }
+
+    /**
+     * Percent off entire cart.
+     */
+    public static class PercentOffCart implements Promotion {
+        private final int percent;
+
+<span class="nc" id="L207">        public PercentOffCart(int percent) {</span>
+<span class="nc" id="L208">            this.percent = percent;</span>
+<span class="nc" id="L209">        }</span>
+
+        @Override
+        public void apply(CartState state) {
+<span class="nc" id="L213">            BigDecimal subtotal = state.getDiscountedSubtotal();</span>
+<span class="nc" id="L214">            BigDecimal discount = subtotal.multiply(BigDecimal.valueOf(percent))</span>
+<span class="nc" id="L215">                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);</span>
+            
+            // Ensure cart doesn't go below zero
+<span class="nc" id="L218">            discount = discount.min(subtotal);</span>
+            
+<span class="nc bnc" id="L220" title="All 2 branches missed.">            if (discount.compareTo(BigDecimal.ZERO) &gt; 0) {</span>
+<span class="nc" id="L221">                state.addCartDiscount(discount);</span>
+<span class="nc" id="L222">                state.addAppliedDiscount(new AppliedDiscount(</span>
+                        PromotionType.PERCENT_OFF_CART, null, percent + &quot;%&quot;, discount));
+            }
+<span class="nc" id="L225">        }</span>
+
+        @Override
+<span class="nc" id="L228">        public PromotionType getType() { return PromotionType.PERCENT_OFF_CART; }</span>
+
+        @Override
+<span class="nc" id="L231">        public int getPriority() { return 40; }</span>
+    }
+
+    /**
+     * Fixed amount off cart.
+     */
+    public static class FixedOffCart implements Promotion {
+        private final BigDecimal amount;
+
+<span class="nc" id="L240">        public FixedOffCart(BigDecimal amount) {</span>
+<span class="nc" id="L241">            this.amount = amount;</span>
+<span class="nc" id="L242">        }</span>
+
+        public FixedOffCart(String amount) {
+<span class="nc" id="L245">            this(new BigDecimal(amount));</span>
+<span class="nc" id="L246">        }</span>
+
+        @Override
+        public void apply(CartState state) {
+<span class="nc" id="L250">            BigDecimal subtotal = state.getDiscountedSubtotal();</span>
+<span class="nc" id="L251">            BigDecimal discount = amount.min(subtotal);</span>
+            
+<span class="nc bnc" id="L253" title="All 2 branches missed.">            if (discount.compareTo(BigDecimal.ZERO) &gt; 0) {</span>
+<span class="nc" id="L254">                state.addCartDiscount(discount);</span>
+<span class="nc" id="L255">                state.addAppliedDiscount(new AppliedDiscount(</span>
+                        PromotionType.FIXED_OFF_CART, null, &quot;$&quot; + amount, discount));
+            }
+<span class="nc" id="L258">        }</span>
+
+        @Override
+<span class="nc" id="L261">        public PromotionType getType() { return PromotionType.FIXED_OFF_CART; }</span>
+
+        @Override
+<span class="nc" id="L264">        public int getPriority() { return 40; }</span>
+    }
+
+    /**
+     * Percent off specific SKU.
+     */
+    public static class PercentOffSku implements Promotion {
+        private final String sku;
+        private final int percent;
+
+<span class="nc" id="L274">        public PercentOffSku(String sku, int percent) {</span>
+<span class="nc" id="L275">            this.sku = sku;</span>
+<span class="nc" id="L276">            this.percent = percent;</span>
+<span class="nc" id="L277">        }</span>
+
+        @Override
+        public void apply(CartState state) {
+<span class="nc bnc" id="L281" title="All 2 branches missed.">            for (CartItem item : state.getCart().getItems()) {</span>
+<span class="nc bnc" id="L282" title="All 2 branches missed.">                if (item.getSku().equals(sku)) {</span>
+<span class="nc" id="L283">                    BigDecimal lineSubtotal = item.getLineSubtotal();</span>
+<span class="nc" id="L284">                    BigDecimal existingDiscount = state.getLineDiscount(sku);</span>
+<span class="nc" id="L285">                    BigDecimal available = lineSubtotal.subtract(existingDiscount);</span>
+                    
+<span class="nc" id="L287">                    BigDecimal discount = lineSubtotal.multiply(BigDecimal.valueOf(percent))</span>
+<span class="nc" id="L288">                            .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);</span>
+<span class="nc" id="L289">                    discount = discount.min(available);</span>
+                    
+<span class="nc bnc" id="L291" title="All 2 branches missed.">                    if (discount.compareTo(BigDecimal.ZERO) &gt; 0) {</span>
+<span class="nc" id="L292">                        state.addLineDiscount(sku, discount);</span>
+<span class="nc" id="L293">                        state.addAppliedDiscount(new AppliedDiscount(</span>
+                                PromotionType.PERCENT_OFF_SKU, sku, percent + &quot;%&quot;, discount));
+                    }
+                }
+<span class="nc" id="L297">            }</span>
+<span class="nc" id="L298">        }</span>
+
+        @Override
+<span class="nc" id="L301">        public PromotionType getType() { return PromotionType.PERCENT_OFF_SKU; }</span>
+
+        @Override
+<span class="nc" id="L304">        public int getPriority() { return 10; }</span>
+    }
+
+    /**
+     * Buy X Get Y promotion.
+     * Buy buyQty of buySku, get getQty of getSku free.
+     */
+    public static class BuyXGetY implements Promotion {
+        private final String buySku;
+        private final int buyQty;
+        private final String getSku;
+        private final int getQty;
+        private final int maxApplications;  // -1 for unlimited
+
+        public BuyXGetY(String buySku, int buyQty, String getSku, int getQty) {
+<span class="nc" id="L319">            this(buySku, buyQty, getSku, getQty, -1);</span>
+<span class="nc" id="L320">        }</span>
+
+<span class="nc" id="L322">        public BuyXGetY(String buySku, int buyQty, String getSku, int getQty, int maxApplications) {</span>
+<span class="nc" id="L323">            this.buySku = buySku;</span>
+<span class="nc" id="L324">            this.buyQty = buyQty;</span>
+<span class="nc" id="L325">            this.getSku = getSku;</span>
+<span class="nc" id="L326">            this.getQty = getQty;</span>
+<span class="nc" id="L327">            this.maxApplications = maxApplications;</span>
+<span class="nc" id="L328">        }</span>
+
+        @Override
+        public void apply(CartState state) {
+<span class="nc" id="L332">            int buyAvailable = state.getCart().getQuantityForSku(buySku);</span>
+<span class="nc" id="L333">            int getAvailable = state.getCart().getQuantityForSku(getSku);</span>
+            
+            // Calculate how many times the promo can apply
+<span class="nc" id="L336">            int timesFromBuy = buyAvailable / buyQty;</span>
+<span class="nc" id="L337">            int timesFromGet = getAvailable / getQty;</span>
+<span class="nc" id="L338">            int times = Math.min(timesFromBuy, timesFromGet);</span>
+            
+<span class="nc bnc" id="L340" title="All 2 branches missed.">            if (maxApplications &gt; 0) {</span>
+<span class="nc" id="L341">                times = Math.min(times, maxApplications);</span>
+            }
+            
+<span class="nc bnc" id="L344" title="All 2 branches missed.">            if (times &lt;= 0) return;</span>
+
+            // Find the getSku item to calculate discount
+<span class="nc" id="L347">            CartItem getItem = state.getCart().getItems().stream()</span>
+<span class="nc" id="L348">                    .filter(i -&gt; i.getSku().equals(getSku))</span>
+<span class="nc" id="L349">                    .findFirst()</span>
+<span class="nc" id="L350">                    .orElse(null);</span>
+            
+<span class="nc bnc" id="L352" title="All 2 branches missed.">            if (getItem == null) return;</span>
+
+            // Discount = unit price of free items
+<span class="nc" id="L355">            int freeQty = times * getQty;</span>
+<span class="nc" id="L356">            BigDecimal discount = getItem.getUnitPrice().multiply(BigDecimal.valueOf(freeQty));</span>
+            
+            // Don't exceed line subtotal
+<span class="nc" id="L359">            BigDecimal lineSubtotal = getItem.getLineSubtotal();</span>
+<span class="nc" id="L360">            BigDecimal existingDiscount = state.getLineDiscount(getSku);</span>
+<span class="nc" id="L361">            BigDecimal available = lineSubtotal.subtract(existingDiscount);</span>
+<span class="nc" id="L362">            discount = discount.min(available);</span>
+            
+<span class="nc bnc" id="L364" title="All 2 branches missed.">            if (discount.compareTo(BigDecimal.ZERO) &gt; 0) {</span>
+<span class="nc" id="L365">                state.addLineDiscount(getSku, discount);</span>
+<span class="nc" id="L366">                state.addAppliedDiscount(new AppliedDiscount(</span>
+                        PromotionType.BUY_X_GET_Y, getSku,
+                        &quot;Buy &quot; + buyQty + &quot; &quot; + buySku + &quot; get &quot; + getQty + &quot; &quot; + getSku + &quot; free&quot;,
+                        discount));
+            }
+<span class="nc" id="L371">        }</span>
+
+        @Override
+<span class="nc" id="L374">        public PromotionType getType() { return PromotionType.BUY_X_GET_Y; }</span>
+
+        @Override
+<span class="nc" id="L377">        public int getPriority() { return 20; }</span>
+    }
+
+    /**
+     * Tiered spend discount.
+     */
+    public static class TieredSpendDiscount implements Promotion {
+        private final List&lt;Tier&gt; tiers;  // Sorted by threshold descending
+
+        public static class Tier {
+            final BigDecimal threshold;
+            final int percentOff;
+
+<span class="nc" id="L390">            public Tier(BigDecimal threshold, int percentOff) {</span>
+<span class="nc" id="L391">                this.threshold = threshold;</span>
+<span class="nc" id="L392">                this.percentOff = percentOff;</span>
+<span class="nc" id="L393">            }</span>
+
+            public Tier(String threshold, int percentOff) {
+<span class="nc" id="L396">                this(new BigDecimal(threshold), percentOff);</span>
+<span class="nc" id="L397">            }</span>
+        }
+
+<span class="nc" id="L400">        public TieredSpendDiscount(List&lt;Tier&gt; tiers) {</span>
+<span class="nc" id="L401">            this.tiers = tiers.stream()</span>
+<span class="nc" id="L402">                    .sorted((a, b) -&gt; b.threshold.compareTo(a.threshold))</span>
+<span class="nc" id="L403">                    .collect(Collectors.toList());</span>
+<span class="nc" id="L404">        }</span>
+
+        @Override
+        public void apply(CartState state) {
+<span class="nc" id="L408">            BigDecimal subtotal = state.getCart().getSubtotal();  // Pre-discount subtotal</span>
+            
+<span class="nc bnc" id="L410" title="All 2 branches missed.">            for (Tier tier : tiers) {</span>
+<span class="nc bnc" id="L411" title="All 2 branches missed.">                if (subtotal.compareTo(tier.threshold) &gt;= 0) {</span>
+<span class="nc" id="L412">                    BigDecimal discountedSubtotal = state.getDiscountedSubtotal();</span>
+<span class="nc" id="L413">                    BigDecimal discount = discountedSubtotal</span>
+<span class="nc" id="L414">                            .multiply(BigDecimal.valueOf(tier.percentOff))</span>
+<span class="nc" id="L415">                            .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);</span>
+                    
+<span class="nc bnc" id="L417" title="All 2 branches missed.">                    if (discount.compareTo(BigDecimal.ZERO) &gt; 0) {</span>
+<span class="nc" id="L418">                        state.addCartDiscount(discount);</span>
+<span class="nc" id="L419">                        state.addAppliedDiscount(new AppliedDiscount(</span>
+                                PromotionType.TIERED_SPEND, null,
+                                &quot;Spend $&quot; + tier.threshold + &quot; get &quot; + tier.percentOff + &quot;% off&quot;,
+                                discount));
+                    }
+                    break;  // Apply only the best tier
+                }
+<span class="nc" id="L426">            }</span>
+<span class="nc" id="L427">        }</span>
+
+        @Override
+<span class="nc" id="L430">        public PromotionType getType() { return PromotionType.TIERED_SPEND; }</span>
+
+        @Override
+<span class="nc" id="L433">        public int getPriority() { return 30; }</span>
+    }
+
+    /**
+     * Tiered quantity discount for a specific SKU.
+     */
+    public static class TieredQuantityDiscount implements Promotion {
+        private final String sku;
+        private final List&lt;Tier&gt; tiers;
+
+        public static class Tier {
+            final int minQty;
+            final int percentOff;
+
+<span class="nc" id="L447">            public Tier(int minQty, int percentOff) {</span>
+<span class="nc" id="L448">                this.minQty = minQty;</span>
+<span class="nc" id="L449">                this.percentOff = percentOff;</span>
+<span class="nc" id="L450">            }</span>
+        }
+
+<span class="nc" id="L453">        public TieredQuantityDiscount(String sku, List&lt;Tier&gt; tiers) {</span>
+<span class="nc" id="L454">            this.sku = sku;</span>
+<span class="nc" id="L455">            this.tiers = tiers.stream()</span>
+<span class="nc" id="L456">                    .sorted((a, b) -&gt; b.minQty - a.minQty)</span>
+<span class="nc" id="L457">                    .collect(Collectors.toList());</span>
+<span class="nc" id="L458">        }</span>
+
+        @Override
+        public void apply(CartState state) {
+<span class="nc" id="L462">            int qty = state.getCart().getQuantityForSku(sku);</span>
+            
+<span class="nc bnc" id="L464" title="All 2 branches missed.">            for (Tier tier : tiers) {</span>
+<span class="nc bnc" id="L465" title="All 2 branches missed.">                if (qty &gt;= tier.minQty) {</span>
+<span class="nc" id="L466">                    CartItem item = state.getCart().getItems().stream()</span>
+<span class="nc" id="L467">                            .filter(i -&gt; i.getSku().equals(sku))</span>
+<span class="nc" id="L468">                            .findFirst()</span>
+<span class="nc" id="L469">                            .orElse(null);</span>
+                    
+<span class="nc bnc" id="L471" title="All 2 branches missed.">                    if (item == null) return;</span>
+
+<span class="nc" id="L473">                    BigDecimal lineSubtotal = item.getLineSubtotal();</span>
+<span class="nc" id="L474">                    BigDecimal existingDiscount = state.getLineDiscount(sku);</span>
+<span class="nc" id="L475">                    BigDecimal available = lineSubtotal.subtract(existingDiscount);</span>
+                    
+<span class="nc" id="L477">                    BigDecimal discount = lineSubtotal</span>
+<span class="nc" id="L478">                            .multiply(BigDecimal.valueOf(tier.percentOff))</span>
+<span class="nc" id="L479">                            .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);</span>
+<span class="nc" id="L480">                    discount = discount.min(available);</span>
+                    
+<span class="nc bnc" id="L482" title="All 2 branches missed.">                    if (discount.compareTo(BigDecimal.ZERO) &gt; 0) {</span>
+<span class="nc" id="L483">                        state.addLineDiscount(sku, discount);</span>
+<span class="nc" id="L484">                        state.addAppliedDiscount(new AppliedDiscount(</span>
+                                PromotionType.TIERED_QUANTITY, sku,
+                                &quot;Buy &quot; + tier.minQty + &quot;+ get &quot; + tier.percentOff + &quot;% off&quot;,
+                                discount));
+                    }
+                    break;
+                }
+<span class="nc" id="L491">            }</span>
+<span class="nc" id="L492">        }</span>
+
+        @Override
+<span class="nc" id="L495">        public PromotionType getType() { return PromotionType.TIERED_QUANTITY; }</span>
+
+        @Override
+<span class="nc" id="L498">        public int getPriority() { return 30; }</span>
+    }
+
+    // ==================== CALCULATORS ====================
+
+    /**
+     * Shipping calculator.
+     */
+<span class="nc" id="L506">    public static class ShippingCalculator {</span>
+<span class="nc" id="L507">        private static final BigDecimal BASE_SHIPPING = new BigDecimal(&quot;7.00&quot;);</span>
+<span class="nc" id="L508">        private static final BigDecimal FREE_SHIPPING_THRESHOLD = new BigDecimal(&quot;50.00&quot;);</span>
+
+        public BigDecimal calculate(CartState state) {
+            // Only US shipping
+<span class="nc bnc" id="L512" title="All 2 branches missed.">            if (state.getCart().getAddress() != null &amp;&amp; </span>
+<span class="nc bnc" id="L513" title="All 2 branches missed.">                !&quot;US&quot;.equalsIgnoreCase(state.getCart().getAddress().getCountry())) {</span>
+<span class="nc" id="L514">                throw new IllegalArgumentException(&quot;Shipping only available to US&quot;);</span>
+            }
+
+            // Free shipping if discounted subtotal &gt;= $50
+<span class="nc bnc" id="L518" title="All 2 branches missed.">            if (state.getDiscountedSubtotal().compareTo(FREE_SHIPPING_THRESHOLD) &gt;= 0) {</span>
+<span class="nc" id="L519">                return BigDecimal.ZERO;</span>
+            }
+
+<span class="nc" id="L522">            return BASE_SHIPPING;</span>
+        }
+    }
+
+    /**
+     * Tax calculator (stub).
+     */
+<span class="nc" id="L529">    public static class TaxCalculator {</span>
+        public BigDecimal calculate(CartState state) {
+            // Placeholder - return 0 for v1
+<span class="nc" id="L532">            return BigDecimal.ZERO;</span>
+        }
+    }
+
+    // ==================== OUTPUT MODEL ====================
+
+    /**
+     * Line item in the receipt.
+     */
+    public static class LineItem {
+        private final String sku;
+        private final int quantity;
+        private final BigDecimal unitPrice;
+        private final BigDecimal lineSubtotal;
+        private final BigDecimal lineDiscount;
+        private final BigDecimal lineTotal;
+
+        public LineItem(String sku, int quantity, BigDecimal unitPrice,
+<span class="nc" id="L550">                        BigDecimal lineSubtotal, BigDecimal lineDiscount) {</span>
+<span class="nc" id="L551">            this.sku = sku;</span>
+<span class="nc" id="L552">            this.quantity = quantity;</span>
+<span class="nc" id="L553">            this.unitPrice = unitPrice.setScale(2, RoundingMode.HALF_UP);</span>
+<span class="nc" id="L554">            this.lineSubtotal = lineSubtotal.setScale(2, RoundingMode.HALF_UP);</span>
+<span class="nc" id="L555">            this.lineDiscount = lineDiscount.setScale(2, RoundingMode.HALF_UP);</span>
+<span class="nc" id="L556">            this.lineTotal = lineSubtotal.subtract(lineDiscount)</span>
+<span class="nc" id="L557">                    .max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);</span>
+<span class="nc" id="L558">        }</span>
+
+<span class="nc" id="L560">        public String getSku() { return sku; }</span>
+<span class="nc" id="L561">        public int getQuantity() { return quantity; }</span>
+<span class="nc" id="L562">        public BigDecimal getUnitPrice() { return unitPrice; }</span>
+<span class="nc" id="L563">        public BigDecimal getLineSubtotal() { return lineSubtotal; }</span>
+<span class="nc" id="L564">        public BigDecimal getLineDiscount() { return lineDiscount; }</span>
+<span class="nc" id="L565">        public BigDecimal getLineTotal() { return lineTotal; }</span>
+    }
+
+    /**
+     * Receipt - final pricing breakdown.
+     */
+    public static class Receipt {
+        private final BigDecimal subtotal;
+        private final BigDecimal discountTotal;
+        private final BigDecimal shipping;
+        private final BigDecimal tax;
+        private final BigDecimal total;
+        private final List&lt;LineItem&gt; lineItems;
+        private final List&lt;AppliedDiscount&gt; appliedDiscounts;
+
+        public Receipt(BigDecimal subtotal, BigDecimal discountTotal, BigDecimal shipping,
+<span class="nc" id="L581">                       BigDecimal tax, List&lt;LineItem&gt; lineItems, List&lt;AppliedDiscount&gt; appliedDiscounts) {</span>
+<span class="nc" id="L582">            this.subtotal = subtotal.setScale(2, RoundingMode.HALF_UP);</span>
+<span class="nc" id="L583">            this.discountTotal = discountTotal.setScale(2, RoundingMode.HALF_UP);</span>
+<span class="nc" id="L584">            this.shipping = shipping.setScale(2, RoundingMode.HALF_UP);</span>
+<span class="nc" id="L585">            this.tax = tax.setScale(2, RoundingMode.HALF_UP);</span>
+<span class="nc" id="L586">            this.total = subtotal.subtract(discountTotal).add(shipping).add(tax)</span>
+<span class="nc" id="L587">                    .max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);</span>
+<span class="nc" id="L588">            this.lineItems = lineItems;</span>
+<span class="nc" id="L589">            this.appliedDiscounts = appliedDiscounts;</span>
+<span class="nc" id="L590">        }</span>
+
+<span class="nc" id="L592">        public BigDecimal getSubtotal() { return subtotal; }</span>
+<span class="nc" id="L593">        public BigDecimal getDiscountTotal() { return discountTotal; }</span>
+<span class="nc" id="L594">        public BigDecimal getShipping() { return shipping; }</span>
+<span class="nc" id="L595">        public BigDecimal getTax() { return tax; }</span>
+<span class="nc" id="L596">        public BigDecimal getTotal() { return total; }</span>
+<span class="nc" id="L597">        public List&lt;LineItem&gt; getLineItems() { return lineItems; }</span>
+<span class="nc" id="L598">        public List&lt;AppliedDiscount&gt; getAppliedDiscounts() { return appliedDiscounts; }</span>
+
+        public String toJson() {
+<span class="nc" id="L601">            StringBuilder sb = new StringBuilder();</span>
+<span class="nc" id="L602">            sb.append(&quot;{\n&quot;);</span>
+<span class="nc" id="L603">            sb.append(&quot;  \&quot;subtotal\&quot;: \&quot;&quot;).append(subtotal).append(&quot;\&quot;,\n&quot;);</span>
+<span class="nc" id="L604">            sb.append(&quot;  \&quot;discount_total\&quot;: \&quot;&quot;).append(discountTotal).append(&quot;\&quot;,\n&quot;);</span>
+<span class="nc" id="L605">            sb.append(&quot;  \&quot;shipping\&quot;: \&quot;&quot;).append(shipping).append(&quot;\&quot;,\n&quot;);</span>
+<span class="nc" id="L606">            sb.append(&quot;  \&quot;tax\&quot;: \&quot;&quot;).append(tax).append(&quot;\&quot;,\n&quot;);</span>
+<span class="nc" id="L607">            sb.append(&quot;  \&quot;total\&quot;: \&quot;&quot;).append(total).append(&quot;\&quot;,\n&quot;);</span>
+            
+<span class="nc" id="L609">            sb.append(&quot;  \&quot;line_items\&quot;: [\n&quot;);</span>
+<span class="nc bnc" id="L610" title="All 2 branches missed.">            for (int i = 0; i &lt; lineItems.size(); i++) {</span>
+<span class="nc" id="L611">                LineItem li = lineItems.get(i);</span>
+<span class="nc" id="L612">                sb.append(&quot;    {\&quot;sku\&quot;: \&quot;&quot;).append(li.getSku())</span>
+<span class="nc" id="L613">                  .append(&quot;\&quot;, \&quot;quantity\&quot;: &quot;).append(li.getQuantity())</span>
+<span class="nc" id="L614">                  .append(&quot;, \&quot;unit_price\&quot;: \&quot;&quot;).append(li.getUnitPrice())</span>
+<span class="nc" id="L615">                  .append(&quot;\&quot;, \&quot;line_subtotal\&quot;: \&quot;&quot;).append(li.getLineSubtotal())</span>
+<span class="nc" id="L616">                  .append(&quot;\&quot;, \&quot;line_discount\&quot;: \&quot;&quot;).append(li.getLineDiscount())</span>
+<span class="nc" id="L617">                  .append(&quot;\&quot;, \&quot;line_total\&quot;: \&quot;&quot;).append(li.getLineTotal())</span>
+<span class="nc" id="L618">                  .append(&quot;\&quot;}&quot;);</span>
+<span class="nc bnc" id="L619" title="All 2 branches missed.">                if (i &lt; lineItems.size() - 1) sb.append(&quot;,&quot;);</span>
+<span class="nc" id="L620">                sb.append(&quot;\n&quot;);</span>
+            }
+<span class="nc" id="L622">            sb.append(&quot;  ],\n&quot;);</span>
+            
+<span class="nc" id="L624">            sb.append(&quot;  \&quot;applied_discounts\&quot;: [\n&quot;);</span>
+<span class="nc bnc" id="L625" title="All 2 branches missed.">            for (int i = 0; i &lt; appliedDiscounts.size(); i++) {</span>
+<span class="nc" id="L626">                sb.append(&quot;    &quot;).append(appliedDiscounts.get(i));</span>
+<span class="nc bnc" id="L627" title="All 2 branches missed.">                if (i &lt; appliedDiscounts.size() - 1) sb.append(&quot;,&quot;);</span>
+<span class="nc" id="L628">                sb.append(&quot;\n&quot;);</span>
+            }
+<span class="nc" id="L630">            sb.append(&quot;  ]\n&quot;);</span>
+            
+<span class="nc" id="L632">            sb.append(&quot;}&quot;);</span>
+<span class="nc" id="L633">            return sb.toString();</span>
+        }
+    }
+
+    // ==================== PRICING ENGINE ====================
+
+    /**
+     * Main pricing engine.
+     */
+<span class="nc" id="L642">    public static class PricingEngine {</span>
+<span class="nc" id="L643">        private final ShippingCalculator shippingCalculator = new ShippingCalculator();</span>
+<span class="nc" id="L644">        private final TaxCalculator taxCalculator = new TaxCalculator();</span>
+
+        public Receipt calculate(Cart cart, List&lt;Promotion&gt; promotions) {
+            // Create mutable state
+<span class="nc" id="L648">            CartState state = new CartState(cart);</span>
+
+            // Sort promotions by priority and apply
+<span class="nc" id="L651">            promotions.stream()</span>
+<span class="nc" id="L652">                    .sorted(Comparator.comparingInt(Promotion::getPriority))</span>
+<span class="nc" id="L653">                    .forEach(p -&gt; p.apply(state));</span>
+
+            // Calculate shipping
+<span class="nc" id="L656">            BigDecimal shipping = shippingCalculator.calculate(state);</span>
+
+            // Calculate tax
+<span class="nc" id="L659">            BigDecimal tax = taxCalculator.calculate(state);</span>
+
+            // Build line items
+<span class="nc" id="L662">            List&lt;LineItem&gt; lineItems = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L663" title="All 2 branches missed.">            for (CartItem item : cart.getItems()) {</span>
+<span class="nc" id="L664">                BigDecimal lineDiscount = state.getLineDiscount(item.getSku());</span>
+<span class="nc" id="L665">                lineItems.add(new LineItem(</span>
+<span class="nc" id="L666">                        item.getSku(),</span>
+<span class="nc" id="L667">                        item.getQuantity(),</span>
+<span class="nc" id="L668">                        item.getUnitPrice(),</span>
+<span class="nc" id="L669">                        item.getLineSubtotal(),</span>
+                        lineDiscount
+                ));
+<span class="nc" id="L672">            }</span>
+
+<span class="nc" id="L674">            return new Receipt(</span>
+<span class="nc" id="L675">                    cart.getSubtotal(),</span>
+<span class="nc" id="L676">                    state.getTotalDiscount(),</span>
+                    shipping,
+                    tax,
+                    lineItems,
+<span class="nc" id="L680">                    state.getAppliedDiscounts()</span>
+            );
+        }
+    }
+
+    // ==================== DEMO ====================
+
+    public static void main(String[] args) {
+<span class="nc" id="L688">        PricingEngine engine = new PricingEngine();</span>
+
+<span class="nc" id="L690">        System.out.println(&quot;=== Example 1: Basic Cart with SKU Discount ===\n&quot;);</span>
+        {
+<span class="nc" id="L692">            Cart cart = new Cart(</span>
+<span class="nc" id="L693">                    Arrays.asList(</span>
+                            new CartItem(&quot;A&quot;, &quot;19.99&quot;, 2),
+                            new CartItem(&quot;B&quot;, &quot;5.00&quot;, 1)
+                    ),
+                    new ShippingAddress(&quot;US&quot;, &quot;WA&quot;, &quot;98056&quot;)
+            );
+
+<span class="nc" id="L700">            List&lt;Promotion&gt; promotions = Arrays.asList(</span>
+                    new PercentOffSku(&quot;A&quot;, 20)
+            );
+
+<span class="nc" id="L704">            Receipt receipt = engine.calculate(cart, promotions);</span>
+<span class="nc" id="L705">            System.out.println(receipt.toJson());</span>
+        }
+
+<span class="nc" id="L708">        System.out.println(&quot;\n=== Example 2: Free Shipping Threshold ===\n&quot;);</span>
+        {
+<span class="nc" id="L710">            Cart cart = new Cart(</span>
+<span class="nc" id="L711">                    Arrays.asList(</span>
+                            new CartItem(&quot;A&quot;, &quot;30.00&quot;, 2)
+                    ),
+                    new ShippingAddress(&quot;US&quot;, &quot;CA&quot;, &quot;90210&quot;)
+            );
+
+<span class="nc" id="L717">            Receipt receipt = engine.calculate(cart, Collections.emptyList());</span>
+<span class="nc" id="L718">            System.out.println(receipt.toJson());</span>
+<span class="nc" id="L719">            System.out.println(&quot;Shipping is FREE because subtotal &gt;= $50&quot;);</span>
+        }
+
+<span class="nc" id="L722">        System.out.println(&quot;\n=== Example 3: Buy X Get Y ===\n&quot;);</span>
+        {
+<span class="nc" id="L724">            Cart cart = new Cart(</span>
+<span class="nc" id="L725">                    Arrays.asList(</span>
+                            new CartItem(&quot;A&quot;, &quot;20.00&quot;, 2),
+                            new CartItem(&quot;B&quot;, &quot;5.00&quot;, 2)
+                    ),
+                    new ShippingAddress(&quot;US&quot;, &quot;NY&quot;, &quot;10001&quot;)
+            );
+
+<span class="nc" id="L732">            List&lt;Promotion&gt; promotions = Arrays.asList(</span>
+                    new BuyXGetY(&quot;A&quot;, 2, &quot;B&quot;, 1)  // Buy 2 A, get 1 B free
+            );
+
+<span class="nc" id="L736">            Receipt receipt = engine.calculate(cart, promotions);</span>
+<span class="nc" id="L737">            System.out.println(receipt.toJson());</span>
+        }
+
+<span class="nc" id="L740">        System.out.println(&quot;\n=== Example 4: Tiered Spend Discount ===\n&quot;);</span>
+        {
+<span class="nc" id="L742">            Cart cart = new Cart(</span>
+<span class="nc" id="L743">                    Arrays.asList(</span>
+                            new CartItem(&quot;A&quot;, &quot;40.00&quot;, 3)  // $120 subtotal
+                    ),
+                    new ShippingAddress(&quot;US&quot;, &quot;TX&quot;, &quot;75001&quot;)
+            );
+
+<span class="nc" id="L749">            List&lt;Promotion&gt; promotions = Arrays.asList(</span>
+<span class="nc" id="L750">                    new TieredSpendDiscount(Arrays.asList(</span>
+                            new TieredSpendDiscount.Tier(&quot;50&quot;, 10),
+                            new TieredSpendDiscount.Tier(&quot;100&quot;, 15),
+                            new TieredSpendDiscount.Tier(&quot;200&quot;, 20)
+                    ))
+            );
+
+<span class="nc" id="L757">            Receipt receipt = engine.calculate(cart, promotions);</span>
+<span class="nc" id="L758">            System.out.println(receipt.toJson());</span>
+        }
+
+<span class="nc" id="L761">        System.out.println(&quot;\n=== Example 5: Multiple Promotions Stacked ===\n&quot;);</span>
+        {
+<span class="nc" id="L763">            Cart cart = new Cart(</span>
+<span class="nc" id="L764">                    Arrays.asList(</span>
+                            new CartItem(&quot;A&quot;, &quot;25.00&quot;, 2),
+                            new CartItem(&quot;B&quot;, &quot;10.00&quot;, 3)
+                    ),
+                    new ShippingAddress(&quot;US&quot;, &quot;WA&quot;, &quot;98056&quot;)
+            );
+
+<span class="nc" id="L771">            List&lt;Promotion&gt; promotions = Arrays.asList(</span>
+                    new PercentOffSku(&quot;A&quot;, 10),
+                    new FixedOffCart(&quot;5.00&quot;)
+            );
+
+<span class="nc" id="L776">            Receipt receipt = engine.calculate(cart, promotions);</span>
+<span class="nc" id="L777">            System.out.println(receipt.toJson());</span>
+        }
+<span class="nc" id="L779">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

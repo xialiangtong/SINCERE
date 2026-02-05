@@ -1,0 +1,486 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ProductShipmentDirected.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sincere</a> &gt; <a href="index.source.html" class="el_package">default</a> &gt; <span class="el_source">ProductShipmentDirected.java</span></div><h1>ProductShipmentDirected.java</h1><pre class="source lang-java linenums">import java.util.*;
+
+/**
+ * OOP-style Product Shipment Solution for Directed Dependencies
+ * 
+ * This solution handles directed dependencies where product1 requires product2
+ * to be shipped first. This requires topological sorting to determine valid
+ * shipping order and cycle detection to identify circular dependencies.
+ */
+<span class="nc" id="L10">public class ProductShipmentDirected {</span>
+
+    /**
+     * Represents a product in the catalog.
+     */
+    public static class Product {
+        private final int id;
+        private final String name;
+
+<span class="nc" id="L19">        public Product(int id) {</span>
+<span class="nc" id="L20">            this.id = id;</span>
+<span class="nc" id="L21">            this.name = &quot;Product-&quot; + id;</span>
+<span class="nc" id="L22">        }</span>
+
+<span class="nc" id="L24">        public Product(int id, String name) {</span>
+<span class="nc" id="L25">            this.id = id;</span>
+<span class="nc" id="L26">            this.name = name;</span>
+<span class="nc" id="L27">        }</span>
+
+        public int getId() {
+<span class="nc" id="L30">            return id;</span>
+        }
+
+        public String getName() {
+<span class="nc" id="L34">            return name;</span>
+        }
+
+        @Override
+        public boolean equals(Object o) {
+<span class="nc bnc" id="L39" title="All 2 branches missed.">            if (this == o) return true;</span>
+<span class="nc bnc" id="L40" title="All 4 branches missed.">            if (o == null || getClass() != o.getClass()) return false;</span>
+<span class="nc" id="L41">            Product product = (Product) o;</span>
+<span class="nc bnc" id="L42" title="All 2 branches missed.">            return id == product.id;</span>
+        }
+
+        @Override
+        public int hashCode() {
+<span class="nc" id="L47">            return Objects.hash(id);</span>
+        }
+
+        @Override
+        public String toString() {
+<span class="nc" id="L52">            return &quot;Product{id=&quot; + id + &quot;, name='&quot; + name + &quot;'}&quot;;</span>
+        }
+    }
+
+    /**
+     * Represents a directed dependency rule between two products.
+     * product1 depends on product2, meaning product2 must be shipped before product1.
+     */
+    public static class DependencyRule {
+        private final Product dependent;    // The product that has a dependency
+        private final Product prerequisite; // The product that must be shipped first
+
+        /**
+         * Creates a dependency rule where 'dependent' requires 'prerequisite' to be shipped first.
+         * @param dependent The product that depends on another
+         * @param prerequisite The product that must be shipped before the dependent
+         */
+<span class="nc" id="L69">        public DependencyRule(Product dependent, Product prerequisite) {</span>
+<span class="nc" id="L70">            this.dependent = dependent;</span>
+<span class="nc" id="L71">            this.prerequisite = prerequisite;</span>
+<span class="nc" id="L72">        }</span>
+
+        public Product getDependent() {
+<span class="nc" id="L75">            return dependent;</span>
+        }
+
+        public Product getPrerequisite() {
+<span class="nc" id="L79">            return prerequisite;</span>
+        }
+
+        @Override
+        public boolean equals(Object o) {
+<span class="nc bnc" id="L84" title="All 2 branches missed.">            if (this == o) return true;</span>
+<span class="nc bnc" id="L85" title="All 4 branches missed.">            if (o == null || getClass() != o.getClass()) return false;</span>
+<span class="nc" id="L86">            DependencyRule that = (DependencyRule) o;</span>
+<span class="nc bnc" id="L87" title="All 2 branches missed.">            return Objects.equals(dependent, that.dependent) &amp;&amp; </span>
+<span class="nc bnc" id="L88" title="All 2 branches missed.">                   Objects.equals(prerequisite, that.prerequisite);</span>
+        }
+
+        @Override
+        public int hashCode() {
+<span class="nc" id="L93">            return Objects.hash(dependent, prerequisite);</span>
+        }
+
+        @Override
+        public String toString() {
+<span class="nc" id="L98">            return &quot;DependencyRule{&quot; + dependent.getName() + &quot; depends on &quot; + prerequisite.getName() + &quot;}&quot;;</span>
+        }
+    }
+
+    /**
+     * Represents an ordered shipment containing products in their required shipping order.
+     */
+    public static class ShipmentOrder {
+        private final List&lt;Product&gt; orderedProducts;
+        private final boolean isValid;
+        private final String errorMessage;
+
+<span class="nc" id="L110">        private ShipmentOrder(List&lt;Product&gt; orderedProducts, boolean isValid, String errorMessage) {</span>
+<span class="nc" id="L111">            this.orderedProducts = orderedProducts;</span>
+<span class="nc" id="L112">            this.isValid = isValid;</span>
+<span class="nc" id="L113">            this.errorMessage = errorMessage;</span>
+<span class="nc" id="L114">        }</span>
+
+        public static ShipmentOrder valid(List&lt;Product&gt; orderedProducts) {
+<span class="nc" id="L117">            return new ShipmentOrder(new ArrayList&lt;&gt;(orderedProducts), true, null);</span>
+        }
+
+        public static ShipmentOrder invalid(String errorMessage) {
+<span class="nc" id="L121">            return new ShipmentOrder(Collections.emptyList(), false, errorMessage);</span>
+        }
+
+        public List&lt;Product&gt; getOrderedProducts() {
+<span class="nc" id="L125">            return Collections.unmodifiableList(orderedProducts);</span>
+        }
+
+        public boolean isValid() {
+<span class="nc" id="L129">            return isValid;</span>
+        }
+
+        public String getErrorMessage() {
+<span class="nc" id="L133">            return errorMessage;</span>
+        }
+
+        @Override
+        public String toString() {
+<span class="nc bnc" id="L138" title="All 2 branches missed.">            if (isValid) {</span>
+<span class="nc" id="L139">                return &quot;ShipmentOrder{valid=true, order=&quot; + orderedProducts + &quot;}&quot;;</span>
+            } else {
+<span class="nc" id="L141">                return &quot;ShipmentOrder{valid=false, error='&quot; + errorMessage + &quot;'}&quot;;</span>
+            }
+        }
+    }
+
+    /**
+     * Result of cycle detection containing whether a cycle exists and the cycle path if found.
+     */
+    public static class CycleDetectionResult {
+        private final boolean hasCycle;
+        private final List&lt;Product&gt; cyclePath;
+
+<span class="nc" id="L153">        private CycleDetectionResult(boolean hasCycle, List&lt;Product&gt; cyclePath) {</span>
+<span class="nc" id="L154">            this.hasCycle = hasCycle;</span>
+<span class="nc" id="L155">            this.cyclePath = cyclePath;</span>
+<span class="nc" id="L156">        }</span>
+
+        public static CycleDetectionResult noCycle() {
+<span class="nc" id="L159">            return new CycleDetectionResult(false, Collections.emptyList());</span>
+        }
+
+        public static CycleDetectionResult cycleFound(List&lt;Product&gt; cyclePath) {
+<span class="nc" id="L163">            return new CycleDetectionResult(true, new ArrayList&lt;&gt;(cyclePath));</span>
+        }
+
+        public boolean hasCycle() {
+<span class="nc" id="L167">            return hasCycle;</span>
+        }
+
+        public List&lt;Product&gt; getCyclePath() {
+<span class="nc" id="L171">            return Collections.unmodifiableList(cyclePath);</span>
+        }
+
+        @Override
+        public String toString() {
+<span class="nc bnc" id="L176" title="All 2 branches missed.">            if (hasCycle) {</span>
+<span class="nc" id="L177">                return &quot;CycleDetectionResult{hasCycle=true, path=&quot; + cyclePath + &quot;}&quot;;</span>
+            } else {
+<span class="nc" id="L179">                return &quot;CycleDetectionResult{hasCycle=false}&quot;;</span>
+            }
+        }
+    }
+
+    /**
+     * Manages the product catalog with directed dependencies.
+     * Provides topological sorting and cycle detection.
+     */
+    public static class ProductCatalog {
+        private final Map&lt;Integer, Product&gt; products;
+        private final Set&lt;DependencyRule&gt; dependencyRules;
+        private final Map&lt;Product, Set&lt;Product&gt;&gt; adjacencyList;  // dependent -&gt; prerequisites
+        private final Map&lt;Product, Integer&gt; inDegree;            // Number of dependencies for each product
+
+<span class="nc" id="L194">        public ProductCatalog() {</span>
+<span class="nc" id="L195">            this.products = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L196">            this.dependencyRules = new LinkedHashSet&lt;&gt;();</span>
+<span class="nc" id="L197">            this.adjacencyList = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L198">            this.inDegree = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L199">        }</span>
+
+        /**
+         * Adds a product to the catalog.
+         */
+        public void addProduct(Product product) {
+<span class="nc" id="L205">            products.put(product.getId(), product);</span>
+<span class="nc" id="L206">            adjacencyList.putIfAbsent(product, new HashSet&lt;&gt;());</span>
+<span class="nc" id="L207">            inDegree.putIfAbsent(product, 0);</span>
+<span class="nc" id="L208">        }</span>
+
+        /**
+         * Adds multiple products to the catalog.
+         */
+        public void addProducts(Product... productsToAdd) {
+<span class="nc bnc" id="L214" title="All 2 branches missed.">            for (Product product : productsToAdd) {</span>
+<span class="nc" id="L215">                addProduct(product);</span>
+            }
+<span class="nc" id="L217">        }</span>
+
+        /**
+         * Adds a directed dependency rule.
+         * The dependent product requires the prerequisite to be shipped first.
+         */
+        public void addDependencyRule(DependencyRule rule) {
+<span class="nc" id="L224">            Product dependent = rule.getDependent();</span>
+<span class="nc" id="L225">            Product prerequisite = rule.getPrerequisite();</span>
+
+            // Ensure both products are in the catalog
+<span class="nc bnc" id="L228" title="All 2 branches missed.">            if (!products.containsKey(dependent.getId())) {</span>
+<span class="nc" id="L229">                addProduct(dependent);</span>
+            }
+<span class="nc bnc" id="L231" title="All 2 branches missed.">            if (!products.containsKey(prerequisite.getId())) {</span>
+<span class="nc" id="L232">                addProduct(prerequisite);</span>
+            }
+
+            // Avoid duplicate rules
+<span class="nc bnc" id="L236" title="All 2 branches missed.">            if (dependencyRules.contains(rule)) {</span>
+<span class="nc" id="L237">                return;</span>
+            }
+
+<span class="nc" id="L240">            dependencyRules.add(rule);</span>
+
+            // Update adjacency list: prerequisite -&gt; dependent (edge direction for topological sort)
+<span class="nc" id="L243">            adjacencyList.get(prerequisite).add(dependent);</span>
+            
+            // Update in-degree: dependent has one more prerequisite
+<span class="nc" id="L246">            inDegree.put(dependent, inDegree.getOrDefault(dependent, 0) + 1);</span>
+<span class="nc" id="L247">        }</span>
+
+        /**
+         * Adds a dependency rule: product with dependentId depends on product with prerequisiteId.
+         */
+        public void addDependencyRule(int dependentId, int prerequisiteId) {
+<span class="nc" id="L253">            Product dependent = products.get(dependentId);</span>
+<span class="nc" id="L254">            Product prerequisite = products.get(prerequisiteId);</span>
+<span class="nc bnc" id="L255" title="All 4 branches missed.">            if (dependent != null &amp;&amp; prerequisite != null) {</span>
+<span class="nc" id="L256">                addDependencyRule(new DependencyRule(dependent, prerequisite));</span>
+            }
+<span class="nc" id="L258">        }</span>
+
+        /**
+         * Gets a product by its ID.
+         */
+        public Product getProduct(int id) {
+<span class="nc" id="L264">            return products.get(id);</span>
+        }
+
+        /**
+         * Gets all products in the catalog.
+         */
+        public Collection&lt;Product&gt; getAllProducts() {
+<span class="nc" id="L271">            return Collections.unmodifiableCollection(products.values());</span>
+        }
+
+        /**
+         * Gets all dependency rules.
+         */
+        public Set&lt;DependencyRule&gt; getDependencyRules() {
+<span class="nc" id="L278">            return Collections.unmodifiableSet(dependencyRules);</span>
+        }
+
+        /**
+         * Detects if there are circular dependencies in the catalog.
+         * Uses DFS-based cycle detection.
+         */
+        public CycleDetectionResult detectCycle() {
+<span class="nc" id="L286">            Set&lt;Product&gt; visited = new HashSet&lt;&gt;();</span>
+<span class="nc" id="L287">            Set&lt;Product&gt; recursionStack = new HashSet&lt;&gt;();</span>
+<span class="nc" id="L288">            List&lt;Product&gt; cyclePath = new ArrayList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L290" title="All 2 branches missed.">            for (Product product : products.values()) {</span>
+<span class="nc bnc" id="L291" title="All 2 branches missed.">                if (detectCycleDFS(product, visited, recursionStack, cyclePath)) {</span>
+<span class="nc" id="L292">                    Collections.reverse(cyclePath);</span>
+<span class="nc" id="L293">                    return CycleDetectionResult.cycleFound(cyclePath);</span>
+                }
+<span class="nc" id="L295">            }</span>
+
+<span class="nc" id="L297">            return CycleDetectionResult.noCycle();</span>
+        }
+
+        private boolean detectCycleDFS(Product current, Set&lt;Product&gt; visited, 
+                                       Set&lt;Product&gt; recursionStack, List&lt;Product&gt; cyclePath) {
+<span class="nc bnc" id="L302" title="All 2 branches missed.">            if (recursionStack.contains(current)) {</span>
+<span class="nc" id="L303">                cyclePath.add(current);</span>
+<span class="nc" id="L304">                return true;</span>
+            }
+
+<span class="nc bnc" id="L307" title="All 2 branches missed.">            if (visited.contains(current)) {</span>
+<span class="nc" id="L308">                return false;</span>
+            }
+
+<span class="nc" id="L311">            visited.add(current);</span>
+<span class="nc" id="L312">            recursionStack.add(current);</span>
+
+<span class="nc bnc" id="L314" title="All 2 branches missed.">            for (Product neighbor : adjacencyList.getOrDefault(current, Collections.emptySet())) {</span>
+<span class="nc bnc" id="L315" title="All 2 branches missed.">                if (detectCycleDFS(neighbor, visited, recursionStack, cyclePath)) {</span>
+<span class="nc" id="L316">                    cyclePath.add(current);</span>
+<span class="nc" id="L317">                    return true;</span>
+                }
+<span class="nc" id="L319">            }</span>
+
+<span class="nc" id="L321">            recursionStack.remove(current);</span>
+<span class="nc" id="L322">            return false;</span>
+        }
+
+        /**
+         * Computes a valid shipping order using topological sort (Kahn's algorithm).
+         * Returns an invalid result if circular dependencies exist.
+         */
+        public ShipmentOrder getShippingOrder() {
+            // Check for cycles first
+<span class="nc" id="L331">            CycleDetectionResult cycleResult = detectCycle();</span>
+<span class="nc bnc" id="L332" title="All 2 branches missed.">            if (cycleResult.hasCycle()) {</span>
+<span class="nc" id="L333">                return ShipmentOrder.invalid(&quot;Circular dependency detected: &quot; + cycleResult.getCyclePath());</span>
+            }
+
+            // Kahn's algorithm for topological sort
+<span class="nc" id="L337">            Map&lt;Product, Integer&gt; inDegreeCopy = new HashMap&lt;&gt;(inDegree);</span>
+<span class="nc" id="L338">            Queue&lt;Product&gt; queue = new LinkedList&lt;&gt;();</span>
+<span class="nc" id="L339">            List&lt;Product&gt; result = new ArrayList&lt;&gt;();</span>
+
+            // Start with products that have no prerequisites
+<span class="nc bnc" id="L342" title="All 2 branches missed.">            for (Product product : products.values()) {</span>
+<span class="nc bnc" id="L343" title="All 2 branches missed.">                if (inDegreeCopy.getOrDefault(product, 0) == 0) {</span>
+<span class="nc" id="L344">                    queue.add(product);</span>
+                }
+<span class="nc" id="L346">            }</span>
+
+<span class="nc bnc" id="L348" title="All 2 branches missed.">            while (!queue.isEmpty()) {</span>
+<span class="nc" id="L349">                Product current = queue.poll();</span>
+<span class="nc" id="L350">                result.add(current);</span>
+
+<span class="nc bnc" id="L352" title="All 2 branches missed.">                for (Product dependent : adjacencyList.getOrDefault(current, Collections.emptySet())) {</span>
+<span class="nc" id="L353">                    int newDegree = inDegreeCopy.get(dependent) - 1;</span>
+<span class="nc" id="L354">                    inDegreeCopy.put(dependent, newDegree);</span>
+<span class="nc bnc" id="L355" title="All 2 branches missed.">                    if (newDegree == 0) {</span>
+<span class="nc" id="L356">                        queue.add(dependent);</span>
+                    }
+<span class="nc" id="L358">                }</span>
+<span class="nc" id="L359">            }</span>
+
+<span class="nc bnc" id="L361" title="All 2 branches missed.">            if (result.size() != products.size()) {</span>
+<span class="nc" id="L362">                return ShipmentOrder.invalid(&quot;Unable to determine shipping order - possible undetected cycle&quot;);</span>
+            }
+
+<span class="nc" id="L365">            return ShipmentOrder.valid(result);</span>
+        }
+
+        /**
+         * Checks if shipping is possible (no circular dependencies).
+         */
+        public boolean isShippingPossible() {
+<span class="nc bnc" id="L372" title="All 2 branches missed.">            return !detectCycle().hasCycle();</span>
+        }
+
+        /**
+         * Gets the number of shipment batches needed when respecting dependencies.
+         * Products with no remaining prerequisites can be shipped in the same batch.
+         */
+        public int getMinimumBatches() {
+<span class="nc bnc" id="L380" title="All 2 branches missed.">            if (!isShippingPossible()) {</span>
+<span class="nc" id="L381">                return -1; // Invalid due to cycle</span>
+            }
+
+<span class="nc" id="L384">            Map&lt;Product, Integer&gt; batchLevel = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L385">            Map&lt;Product, Integer&gt; inDegreeCopy = new HashMap&lt;&gt;(inDegree);</span>
+<span class="nc" id="L386">            Queue&lt;Product&gt; queue = new LinkedList&lt;&gt;();</span>
+
+            // Start with products that have no prerequisites (batch 0)
+<span class="nc bnc" id="L389" title="All 2 branches missed.">            for (Product product : products.values()) {</span>
+<span class="nc bnc" id="L390" title="All 2 branches missed.">                if (inDegreeCopy.getOrDefault(product, 0) == 0) {</span>
+<span class="nc" id="L391">                    queue.add(product);</span>
+<span class="nc" id="L392">                    batchLevel.put(product, 0);</span>
+                }
+<span class="nc" id="L394">            }</span>
+
+<span class="nc" id="L396">            int maxBatch = 0;</span>
+
+<span class="nc bnc" id="L398" title="All 2 branches missed.">            while (!queue.isEmpty()) {</span>
+<span class="nc" id="L399">                Product current = queue.poll();</span>
+<span class="nc" id="L400">                int currentBatch = batchLevel.get(current);</span>
+
+<span class="nc bnc" id="L402" title="All 2 branches missed.">                for (Product dependent : adjacencyList.getOrDefault(current, Collections.emptySet())) {</span>
+<span class="nc" id="L403">                    int newDegree = inDegreeCopy.get(dependent) - 1;</span>
+<span class="nc" id="L404">                    inDegreeCopy.put(dependent, newDegree);</span>
+                    
+                    // Dependent goes in the next batch after its latest prerequisite
+<span class="nc" id="L407">                    int dependentBatch = Math.max(</span>
+<span class="nc" id="L408">                        batchLevel.getOrDefault(dependent, 0), </span>
+                        currentBatch + 1
+                    );
+<span class="nc" id="L411">                    batchLevel.put(dependent, dependentBatch);</span>
+<span class="nc" id="L412">                    maxBatch = Math.max(maxBatch, dependentBatch);</span>
+
+<span class="nc bnc" id="L414" title="All 2 branches missed.">                    if (newDegree == 0) {</span>
+<span class="nc" id="L415">                        queue.add(dependent);</span>
+                    }
+<span class="nc" id="L417">                }</span>
+<span class="nc" id="L418">            }</span>
+
+<span class="nc" id="L420">            return maxBatch + 1; // Convert from 0-indexed to count</span>
+        }
+
+        @Override
+        public String toString() {
+<span class="nc" id="L425">            return &quot;ProductCatalog{products=&quot; + products.size() + </span>
+<span class="nc" id="L426">                   &quot;, rules=&quot; + dependencyRules.size() + &quot;}&quot;;</span>
+        }
+    }
+
+    public static void main(String[] args) {
+<span class="nc" id="L431">        System.out.println(&quot;=== Directed Dependency Example ===\n&quot;);</span>
+
+<span class="nc" id="L433">        ProductCatalog catalog = new ProductCatalog();</span>
+
+        // Add products
+<span class="nc" id="L436">        Product laptop = new Product(0, &quot;Laptop&quot;);</span>
+<span class="nc" id="L437">        Product charger = new Product(1, &quot;Charger&quot;);</span>
+<span class="nc" id="L438">        Product battery = new Product(2, &quot;Battery&quot;);</span>
+<span class="nc" id="L439">        Product keyboard = new Product(3, &quot;Keyboard&quot;);</span>
+<span class="nc" id="L440">        Product mouse = new Product(4, &quot;Mouse&quot;);</span>
+
+<span class="nc" id="L442">        catalog.addProducts(laptop, charger, battery, keyboard, mouse);</span>
+
+        // Add directed dependencies:
+        // - Laptop depends on Charger (charger must ship first)
+        // - Laptop depends on Battery (battery must ship first)
+        // - Charger depends on Battery (battery must ship first)
+<span class="nc" id="L448">        catalog.addDependencyRule(new DependencyRule(laptop, charger));</span>
+<span class="nc" id="L449">        catalog.addDependencyRule(new DependencyRule(laptop, battery));</span>
+<span class="nc" id="L450">        catalog.addDependencyRule(new DependencyRule(charger, battery));</span>
+
+<span class="nc" id="L452">        System.out.println(&quot;Catalog: &quot; + catalog);</span>
+<span class="nc" id="L453">        System.out.println(&quot;Dependency Rules: &quot; + catalog.getDependencyRules());</span>
+<span class="nc" id="L454">        System.out.println();</span>
+
+        // Check for cycles
+<span class="nc" id="L457">        CycleDetectionResult cycleResult = catalog.detectCycle();</span>
+<span class="nc" id="L458">        System.out.println(&quot;Cycle Detection: &quot; + cycleResult);</span>
+<span class="nc" id="L459">        System.out.println(&quot;Shipping Possible: &quot; + catalog.isShippingPossible());</span>
+<span class="nc" id="L460">        System.out.println();</span>
+
+        // Get shipping order
+<span class="nc" id="L463">        ShipmentOrder order = catalog.getShippingOrder();</span>
+<span class="nc" id="L464">        System.out.println(&quot;Shipping Order: &quot; + order);</span>
+<span class="nc" id="L465">        System.out.println(&quot;Minimum Batches: &quot; + catalog.getMinimumBatches());</span>
+
+<span class="nc" id="L467">        System.out.println(&quot;\n=== Circular Dependency Example ===\n&quot;);</span>
+
+<span class="nc" id="L469">        ProductCatalog catalogWithCycle = new ProductCatalog();</span>
+<span class="nc" id="L470">        Product a = new Product(10, &quot;ProductA&quot;);</span>
+<span class="nc" id="L471">        Product b = new Product(11, &quot;ProductB&quot;);</span>
+<span class="nc" id="L472">        Product c = new Product(12, &quot;ProductC&quot;);</span>
+
+<span class="nc" id="L474">        catalogWithCycle.addProducts(a, b, c);</span>
+
+        // Create a cycle: A -&gt; B -&gt; C -&gt; A
+<span class="nc" id="L477">        catalogWithCycle.addDependencyRule(new DependencyRule(a, b));</span>
+<span class="nc" id="L478">        catalogWithCycle.addDependencyRule(new DependencyRule(b, c));</span>
+<span class="nc" id="L479">        catalogWithCycle.addDependencyRule(new DependencyRule(c, a));</span>
+
+<span class="nc" id="L481">        System.out.println(&quot;Catalog with cycle: &quot; + catalogWithCycle);</span>
+<span class="nc" id="L482">        System.out.println(&quot;Cycle Detection: &quot; + catalogWithCycle.detectCycle());</span>
+<span class="nc" id="L483">        System.out.println(&quot;Shipping Order: &quot; + catalogWithCycle.getShippingOrder());</span>
+<span class="nc" id="L484">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

@@ -229,3 +229,219 @@ BXGY applies once, applies multiple times, and handles insufficient quantity
 Tiered spend discount selects correct tier
 
 Rounding: allocation and deterministic penny handling (at least one test)
+
+
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          CART PRICING ENGINE                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+                              ┌─────────────────┐
+                              │   PricingEngine │
+                              ├─────────────────┤
+                              │ + calculate(    │
+                              │     cart,       │
+                              │     promotions, │
+                              │     shipping,   │
+                              │     tax         │
+                              │   ): Receipt    │
+                              └────────┬────────┘
+                                       │
+                    ┌──────────────────┼──────────────────┐
+                    │                  │                  │
+                    ▼                  ▼                  ▼
+          ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+          │ PromotionEngine │ │ShippingCalculator│ │ TaxCalculator  │
+          └─────────────────┘ └─────────────────┘ └─────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              DATA MODEL                                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────┐         ┌─────────────────────────┐
+│          Cart           │         │      ShippingAddress    │
+├─────────────────────────┤         ├─────────────────────────┤
+│ - items: List<CartItem> │────────▶│ - country: String       │
+│ - address: ShippingAddr │         │ - state: String         │
+│ - discountCodes: List   │         │ - zip: String           │
+└───────────┬─────────────┘         └─────────────────────────┘
+            │
+            │ contains
+            ▼
+┌─────────────────────────┐
+│        CartItem         │
+├─────────────────────────┤
+│ - sku: String           │
+│ - unitPrice: BigDecimal │
+│ - quantity: int         │
+├─────────────────────────┤
+│ + getLineSubtotal()     │
+└─────────────────────────┘
+
+
+Promotion Hierarchy (Strategy Pattern)
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         PROMOTION TYPES                                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+                    ┌───────────────────────────────┐
+                    │   <<interface>> Promotion     │
+                    ├───────────────────────────────┤
+                    │ + apply(cart): DiscountResult │
+                    │ + getType(): PromotionType    │
+                    │ + getPriority(): int          │
+                    └───────────────┬───────────────┘
+                                    △
+                                    │ implements
+        ┌───────────────┬───────────┼───────────┬───────────────┐
+        │               │           │           │               │
+        ▼               ▼           ▼           ▼               ▼
+┌───────────────┐ ┌───────────┐ ┌─────────┐ ┌─────────┐ ┌───────────────┐
+│PercentOffCart │ │FixedOff  │ │PercOff  │ │  BXGY   │ │TieredDiscount │
+│               │ │  Cart    │ │  SKU    │ │         │ │               │
+├───────────────┤ ├───────────┤ ├─────────┤ ├─────────┤ ├───────────────┤
+│ -percent: int │ │-amount:  │ │-sku     │ │-buyQty  │ │-tiers: List   │
+│               │ │ BigDec   │ │-percent │ │-buySku  │ │-type: SPEND/  │
+│               │ │          │ │         │ │-getQty  │ │       QUANTITY│
+│               │ │          │ │         │ │-getSku  │ │               │
+└───────────────┘ └───────────┘ └─────────┘ └─────────┘ └───────────────┘
+
+                    ┌───────────────────────────────┐
+                    │        PromotionType          │
+                    │           (enum)              │
+                    ├───────────────────────────────┤
+                    │ PERCENT_OFF_CART              │
+                    │ FIXED_OFF_CART                │
+                    │ PERCENT_OFF_SKU               │
+                    │ BUY_X_GET_Y                   │
+                    │ TIERED_SPEND                  │
+                    │ TIERED_QUANTITY               │
+                    └───────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            OUTPUT MODEL                                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌───────────────────────────────┐
+│           Receipt             │
+├───────────────────────────────┤
+│ - subtotal: BigDecimal        │
+│ - discountTotal: BigDecimal   │
+│ - shipping: BigDecimal        │
+│ - tax: BigDecimal             │
+│ - total: BigDecimal           │
+│ - lineItems: List<LineItem>   │
+│ - appliedDiscounts: List      │
+└───────────────────────────────┘
+              │
+              │ contains
+              ▼
+┌───────────────────────────────┐     ┌───────────────────────────────┐
+│          LineItem             │     │      AppliedDiscount          │
+├───────────────────────────────┤     ├───────────────────────────────┤
+│ - sku: String                 │     │ - type: PromotionType         │
+│ - quantity: int               │     │ - sku: String (nullable)      │
+│ - unitPrice: BigDecimal       │     │ - value: String (e.g. "20%")  │
+│ - lineSubtotal: BigDecimal    │     │ - amount: BigDecimal          │
+│ - lineDiscount: BigDecimal    │     └───────────────────────────────┘
+│ - lineTotal: BigDecimal       │
+└───────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          PROCESSING FLOW                                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+    Cart Input
+        │
+        ▼
+┌───────────────────────┐
+│  1. Validate Cart     │
+│  - qty > 0            │
+│  - price >= 0         │
+│  - valid SKUs         │
+└───────────┬───────────┘
+            │
+            ▼
+┌───────────────────────┐
+│  2. Calculate         │
+│     Subtotal          │
+│  Σ(qty × unit_price)  │
+└───────────┬───────────┘
+            │
+            ▼
+┌───────────────────────────────────────────────────────┐
+│  3. Apply Promotions (in priority order)              │
+│  ┌─────────────────────────────────────────────────┐  │
+│  │  a) SKU-specific discounts (PERCENT_OFF_SKU)   │  │
+│  │  b) BXGY promotions                            │  │
+│  │  c) Tiered discounts (SPEND/QUANTITY)          │  │
+│  │  d) Cart-wide discounts (PERCENT/FIXED OFF)    │  │
+│  └─────────────────────────────────────────────────┘  │
+│  Rule: No line below $0, no cart below $0             │
+└───────────────────────┬───────────────────────────────┘
+                        │
+                        ▼
+┌───────────────────────────────────────────────────────┐
+│  4. Calculate Shipping                                │
+│  ┌─────────────────────────────────────────────────┐  │
+│  │  • Base = $7.00                                 │  │
+│  │  • FREE if discounted subtotal >= $50          │  │
+│  │  • US only (or vary by country)                │  │
+│  └─────────────────────────────────────────────────┘  │
+└───────────────────────┬───────────────────────────────┘
+                        │
+                        ▼
+┌───────────────────────────────────────────────────────┐
+│  5. Calculate Tax (stub = $0.00)                      │
+└───────────────────────┬───────────────────────────────┘
+                        │
+                        ▼
+┌───────────────────────────────────────────────────────┐
+│  6. Compute Final Total                               │
+│                                                       │
+│  total = subtotal - discount + shipping + tax         │
+│                                                       │
+│  Apply rounding (2 decimal places)                    │
+└───────────────────────┬───────────────────────────────┘
+                        │
+                        ▼
+                    Receipt
+                   (JSON/Object)
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     DISCOUNT APPLICATION ORDER                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+  Priority 1: SKU-Specific
+  ┌────────────────────────────────────────┐
+  │  PERCENT_OFF_SKU("A", 20%)             │
+  │  → Apply to matching lines only        │
+  └────────────────────┬───────────────────┘
+                       ▼
+  Priority 2: BXGY Promotions
+  ┌────────────────────────────────────────┐
+  │  BUY_X_GET_Y(buy 2 A, get 1 B free)    │
+  │  → Discount cheapest eligible Y items  │
+  │  → Apply as many times as possible     │
+  └────────────────────┬───────────────────┘
+                       ▼
+  Priority 3: Tiered Discounts
+  ┌────────────────────────────────────────┐
+  │  TIERED_SPEND($50→10%, $100→15%)       │
+  │  TIERED_QUANTITY(SKU A: 5+→10%)        │
+  │  → Based on pre-discount subtotal      │
+  │  → Pick best matching tier             │
+  └────────────────────┬───────────────────┘
+                       ▼
+  Priority 4: Cart-Wide
+  ┌────────────────────────────────────────┐
+  │  PERCENT_OFF_CART(10%)                 │
+  │  FIXED_OFF_CART($5)                    │
+  │  → Apply to remaining cart total       │
+  │  → Floor at $0                         │
+  └────────────────────────────────────────┘                   
