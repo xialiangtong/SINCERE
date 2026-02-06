@@ -170,6 +170,104 @@ public class RobotNavigationSolutionTest {
             assertEquals(0, robot.getPosition().getX());
             assertEquals(0, robot.getPosition().getY());
         }
+
+        @Test
+        @DisplayName("Robot tracks initial position in history")
+        void testRobotInitialHistory() {
+            RobotNavigationSolution.Robot robot = new RobotNavigationSolution.Robot();
+            java.util.List<RobotNavigationSolution.Position> history = robot.getMoveHistory();
+            
+            assertEquals(1, history.size());
+            assertEquals(0, history.get(0).getX());
+            assertEquals(0, history.get(0).getY());
+        }
+
+        @Test
+        @DisplayName("Robot tracks all positions during moveForward")
+        void testRobotHistoryMoveForward() {
+            RobotNavigationSolution.Robot robot = new RobotNavigationSolution.Robot();
+            robot.moveForward(3, null);
+            
+            java.util.List<RobotNavigationSolution.Position> history = robot.getMoveHistory();
+            assertEquals(4, history.size()); // initial + 3 moves
+            
+            assertEquals(0, history.get(0).getY()); // Start at (0,0)
+            assertEquals(1, history.get(1).getY()); // (0,1)
+            assertEquals(2, history.get(2).getY()); // (0,2)
+            assertEquals(3, history.get(3).getY()); // (0,3)
+        }
+
+        @Test
+        @DisplayName("Robot tracks all positions during moveBackward")
+        void testRobotHistoryMoveBackward() {
+            RobotNavigationSolution.Robot robot = new RobotNavigationSolution.Robot();
+            robot.moveBackward(2, null);
+            
+            java.util.List<RobotNavigationSolution.Position> history = robot.getMoveHistory();
+            assertEquals(3, history.size()); // initial + 2 moves
+            
+            assertEquals(0, history.get(0).getY());  // (0,0)
+            assertEquals(-1, history.get(1).getY()); // (0,-1)
+            assertEquals(-2, history.get(2).getY()); // (0,-2)
+        }
+
+        @Test
+        @DisplayName("Robot history tracks complex movement path")
+        void testRobotHistoryComplexPath() {
+            RobotNavigationSolution.Robot robot = new RobotNavigationSolution.Robot();
+            robot.moveForward(2, null);  // (0,0) -> (0,1) -> (0,2)
+            robot.turnRight();           // Now facing EAST
+            robot.moveForward(2, null);  // (0,2) -> (1,2) -> (2,2)
+            
+            java.util.List<RobotNavigationSolution.Position> history = robot.getMoveHistory();
+            assertEquals(5, history.size());
+            
+            // Verify path
+            assertEquals("(0, 0)", history.get(0).toString());
+            assertEquals("(0, 1)", history.get(1).toString());
+            assertEquals("(0, 2)", history.get(2).toString());
+            assertEquals("(1, 2)", history.get(3).toString());
+            assertEquals("(2, 2)", history.get(4).toString());
+        }
+
+        @Test
+        @DisplayName("Robot history is unmodifiable")
+        void testRobotHistoryUnmodifiable() {
+            RobotNavigationSolution.Robot robot = new RobotNavigationSolution.Robot();
+            java.util.List<RobotNavigationSolution.Position> history = robot.getMoveHistory();
+            
+            assertThrows(UnsupportedOperationException.class, () -> {
+                history.add(new RobotNavigationSolution.Position(99, 99));
+            });
+        }
+
+        @Test
+        @DisplayName("Robot clearHistory resets to current position")
+        void testRobotClearHistory() {
+            RobotNavigationSolution.Robot robot = new RobotNavigationSolution.Robot();
+            robot.moveForward(5, null);
+            assertEquals(6, robot.getMoveHistory().size());
+            
+            robot.clearHistory();
+            
+            java.util.List<RobotNavigationSolution.Position> history = robot.getMoveHistory();
+            assertEquals(1, history.size());
+            assertEquals(5, history.get(0).getY()); // Current position is (0,5)
+        }
+
+        @Test
+        @DisplayName("Blocked movement does not add to history")
+        void testRobotHistoryBlockedMovement() {
+            RobotNavigationSolution.Robot robot = new RobotNavigationSolution.Robot();
+            java.util.Set<RobotNavigationSolution.Position> obstacles = 
+                java.util.Set.of(new RobotNavigationSolution.Position(0, 1));
+            
+            robot.moveForward(5, obstacles); // Blocked at first step
+            
+            java.util.List<RobotNavigationSolution.Position> history = robot.getMoveHistory();
+            assertEquals(1, history.size()); // Only initial position
+            assertEquals(0, history.get(0).getY());
+        }
     }
 
     // ==================== Command Parser Tests ====================
@@ -874,6 +972,102 @@ public class RobotNavigationSolutionTest {
             assertNotNull(robot);
             assertEquals(0, robot.getPosition().getX());
             assertEquals(0, robot.getPosition().getY());
+        }
+
+        @Test
+        @DisplayName("Robot blocked by another robot")
+        void testRobotBlockedByAnotherRobot() {
+            // Robot A at origin facing north
+            solution.addRobot("A");
+            // Robot B at (0, 3) - directly in A's path
+            solution.addRobot("B", 
+                new RobotNavigationSolution.Position(0, 3), 
+                RobotNavigationSolution.Direction.NORTH);
+            
+            // A tries to move 5 steps north, but B is at (0, 3)
+            RobotNavigationSolution.Position pos = solution.robotNavigate(
+                "A", Arrays.asList("F5"));
+            
+            // A should stop at (0, 2), blocked by B at (0, 3)
+            assertEquals(0, pos.getX());
+            assertEquals(2, pos.getY());
+            
+            // B should still be at (0, 3)
+            assertEquals(0, solution.getRobot("B").getPosition().getX());
+            assertEquals(3, solution.getRobot("B").getPosition().getY());
+        }
+
+        @Test
+        @DisplayName("Robot can move after blocking robot moves away")
+        void testRobotCanMoveAfterBlockerMoves() {
+            // Robot A at origin facing north
+            solution.addRobot("A");
+            // Robot B at (0, 1) - blocking A
+            solution.addRobot("B", 
+                new RobotNavigationSolution.Position(0, 1), 
+                RobotNavigationSolution.Direction.EAST);
+            
+            // A tries to move forward - blocked by B at (0, 1)
+            solution.robotNavigate("A", Arrays.asList("F1"));
+            assertEquals(0, solution.getRobot("A").getPosition().getY()); // Still at origin
+            
+            // B moves east, out of A's way
+            solution.robotNavigate("B", Arrays.asList("F2"));
+            assertEquals(2, solution.getRobot("B").getPosition().getX());
+            assertEquals(1, solution.getRobot("B").getPosition().getY());
+            
+            // Now A can move forward
+            solution.robotNavigate("A", Arrays.asList("F3"));
+            assertEquals(0, solution.getRobot("A").getPosition().getX());
+            assertEquals(3, solution.getRobot("A").getPosition().getY());
+        }
+
+        @Test
+        @DisplayName("Two robots cannot occupy same position")
+        void testTwoRobotsCannotOccupySamePosition() {
+            // Remove default robot to simplify test
+            solution.removeRobot("default");
+            
+            // Robot A at (2, 0) facing west
+            solution.addRobot("A", 
+                new RobotNavigationSolution.Position(2, 0), 
+                RobotNavigationSolution.Direction.WEST);
+            // Robot B at (-2, 0) facing east
+            solution.addRobot("B", 
+                new RobotNavigationSolution.Position(-2, 0), 
+                RobotNavigationSolution.Direction.EAST);
+            
+            // Both try to reach origin
+            solution.robotNavigate("A", Arrays.asList("F2")); // A reaches (0, 0)
+            solution.robotNavigate("B", Arrays.asList("F2")); // B blocked at (-1, 0)
+            
+            assertEquals(0, solution.getRobot("A").getPosition().getX());
+            assertEquals(0, solution.getRobot("A").getPosition().getY());
+            assertEquals(-1, solution.getRobot("B").getPosition().getX());
+            assertEquals(0, solution.getRobot("B").getPosition().getY());
+        }
+
+        @Test
+        @DisplayName("Robot blocked by static obstacle and another robot")
+        void testRobotBlockedByBothObstacleAndRobot() {
+            // Static obstacle at (0, 5)
+            solution.setObstacles(Set.of(
+                new RobotNavigationSolution.Position(0, 5)));
+            
+            // Robot A at origin facing north
+            solution.addRobot("A");
+            // Robot B at (0, 3)
+            solution.addRobot("B", 
+                new RobotNavigationSolution.Position(0, 3), 
+                RobotNavigationSolution.Direction.NORTH);
+            
+            // A moves north - blocked by B at (0, 3)
+            solution.robotNavigate("A", Arrays.asList("F10"));
+            assertEquals(2, solution.getRobot("A").getPosition().getY());
+            
+            // B moves north - blocked by obstacle at (0, 5)
+            solution.robotNavigate("B", Arrays.asList("F10"));
+            assertEquals(4, solution.getRobot("B").getPosition().getY());
         }
     }
 }

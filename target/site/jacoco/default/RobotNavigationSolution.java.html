@@ -94,55 +94,73 @@ public class RobotNavigationSolution {
 
     /**
      * Navigate a specific robot using a list of command strings.
+     * Other robots on the board act as obstacles.
      * 
      * @param robotId the robot to navigate
      * @param commandStrs list of command strings (e.g., &quot;F3&quot;, &quot;R&quot;, &quot;B2&quot;)
      * @return final position of the robot, or null if robot not found
      */
     public Position robotNavigate(String robotId, java.util.List&lt;String&gt; commandStrs) {
-<span class="fc" id="L103">        Robot robot = robots.get(robotId);</span>
-<span class="fc bfc" id="L104" title="All 2 branches covered.">        if (robot == null) {</span>
-<span class="fc" id="L105">            return null;</span>
+<span class="fc" id="L104">        Robot robot = robots.get(robotId);</span>
+<span class="fc bfc" id="L105" title="All 2 branches covered.">        if (robot == null) {</span>
+<span class="fc" id="L106">            return null;</span>
         }
         
-<span class="fc bfc" id="L108" title="All 2 branches covered.">        for (String cmdStr : commandStrs) {</span>
-<span class="fc" id="L109">            Command command = CommandParser.parse(cmdStr);</span>
-<span class="fc bfc" id="L110" title="All 2 branches covered.">            if (command != null) {</span>
-<span class="fc" id="L111">                command.execute(robot, obstacles);</span>
+        // Build combined obstacles: static obstacles + other robots' positions
+<span class="fc" id="L110">        java.util.Set&lt;Position&gt; allObstacles = new java.util.HashSet&lt;&gt;(obstacles);</span>
+<span class="fc bfc" id="L111" title="All 2 branches covered.">        for (java.util.Map.Entry&lt;String, Robot&gt; entry : robots.entrySet()) {</span>
+<span class="fc bfc" id="L112" title="All 2 branches covered.">            if (!entry.getKey().equals(robotId)) {</span>
+<span class="fc" id="L113">                allObstacles.add(entry.getValue().getPosition());</span>
             }
-<span class="fc" id="L113">        }</span>
-<span class="fc" id="L114">        return robot.getPosition();</span>
+<span class="fc" id="L115">        }</span>
+        
+<span class="fc bfc" id="L117" title="All 2 branches covered.">        for (String cmdStr : commandStrs) {</span>
+<span class="fc" id="L118">            Command command = CommandParser.parse(cmdStr);</span>
+<span class="fc bfc" id="L119" title="All 2 branches covered.">            if (command != null) {</span>
+<span class="fc" id="L120">                command.execute(robot, allObstacles);</span>
+                
+                // Update obstacles as this robot moves (other robots may still block)
+<span class="fc" id="L123">                allObstacles.clear();</span>
+<span class="fc" id="L124">                allObstacles.addAll(obstacles);</span>
+<span class="fc bfc" id="L125" title="All 2 branches covered.">                for (java.util.Map.Entry&lt;String, Robot&gt; entry : robots.entrySet()) {</span>
+<span class="fc bfc" id="L126" title="All 2 branches covered.">                    if (!entry.getKey().equals(robotId)) {</span>
+<span class="fc" id="L127">                        allObstacles.add(entry.getValue().getPosition());</span>
+                    }
+<span class="fc" id="L129">                }</span>
+            }
+<span class="fc" id="L131">        }</span>
+<span class="fc" id="L132">        return robot.getPosition();</span>
     }
 
     /**
      * Set obstacles for the navigation.
      */
     public void setObstacles(java.util.Set&lt;Position&gt; obstacles) {
-<span class="pc bpc" id="L121" title="1 of 2 branches missed.">        this.obstacles = obstacles != null ? obstacles : new java.util.HashSet&lt;&gt;();</span>
-<span class="fc" id="L122">    }</span>
+<span class="pc bpc" id="L139" title="1 of 2 branches missed.">        this.obstacles = obstacles != null ? obstacles : new java.util.HashSet&lt;&gt;();</span>
+<span class="fc" id="L140">    }</span>
 
     // ==================== Direction Enum ====================
 
-<span class="fc" id="L126">    public enum Direction {</span>
-<span class="fc" id="L127">        EAST(1, 0),</span>
-<span class="fc" id="L128">        SOUTH(0, -1),</span>
-<span class="fc" id="L129">        WEST(-1, 0),</span>
-<span class="fc" id="L130">        NORTH(0, 1);</span>
+<span class="fc" id="L144">    public enum Direction {</span>
+<span class="fc" id="L145">        EAST(1, 0),</span>
+<span class="fc" id="L146">        SOUTH(0, -1),</span>
+<span class="fc" id="L147">        WEST(-1, 0),</span>
+<span class="fc" id="L148">        NORTH(0, 1);</span>
 
         private final int dx;
         private final int dy;
 
-<span class="fc" id="L135">        Direction(int dx, int dy) {</span>
-<span class="fc" id="L136">            this.dx = dx;</span>
-<span class="fc" id="L137">            this.dy = dy;</span>
-<span class="fc" id="L138">        }</span>
+<span class="fc" id="L153">        Direction(int dx, int dy) {</span>
+<span class="fc" id="L154">            this.dx = dx;</span>
+<span class="fc" id="L155">            this.dy = dy;</span>
+<span class="fc" id="L156">        }</span>
 
         public int getDx() {
-<span class="fc" id="L141">            return dx;</span>
+<span class="fc" id="L159">            return dx;</span>
         }
 
         public int getDy() {
-<span class="fc" id="L145">            return dy;</span>
+<span class="fc" id="L163">            return dy;</span>
         }
 
         /**
@@ -150,7 +168,7 @@ public class RobotNavigationSolution {
          * NORTH -&gt; WEST -&gt; SOUTH -&gt; EAST -&gt; NORTH
          */
         public Direction turnLeft() {
-<span class="fc" id="L153">            return values()[(ordinal() + 3) % 4];</span>
+<span class="fc" id="L171">            return values()[(ordinal() + 3) % 4];</span>
         }
 
         /**
@@ -158,7 +176,7 @@ public class RobotNavigationSolution {
          * NORTH -&gt; EAST -&gt; SOUTH -&gt; WEST -&gt; NORTH
          */
         public Direction turnRight() {
-<span class="fc" id="L161">            return values()[(ordinal() + 1) % 4];</span>
+<span class="fc" id="L179">            return values()[(ordinal() + 1) % 4];</span>
         }
     }
 
@@ -168,17 +186,17 @@ public class RobotNavigationSolution {
         private final int x;
         private final int y;
 
-<span class="fc" id="L171">        public Position(int x, int y) {</span>
-<span class="fc" id="L172">            this.x = x;</span>
-<span class="fc" id="L173">            this.y = y;</span>
-<span class="fc" id="L174">        }</span>
+<span class="fc" id="L189">        public Position(int x, int y) {</span>
+<span class="fc" id="L190">            this.x = x;</span>
+<span class="fc" id="L191">            this.y = y;</span>
+<span class="fc" id="L192">        }</span>
 
         public int getX() {
-<span class="fc" id="L177">            return x;</span>
+<span class="fc" id="L195">            return x;</span>
         }
 
         public int getY() {
-<span class="fc" id="L181">            return y;</span>
+<span class="fc" id="L199">            return y;</span>
         }
 
         /**
@@ -186,25 +204,25 @@ public class RobotNavigationSolution {
          * Returns a new Position.
          */
         public Position move(int dx, int dy, int steps) {
-<span class="fc" id="L189">            return new Position(x + dx * steps, y + dy * steps);</span>
+<span class="fc" id="L207">            return new Position(x + dx * steps, y + dy * steps);</span>
         }
 
         @Override
         public boolean equals(Object o) {
-<span class="pc bpc" id="L194" title="1 of 2 branches missed.">            if (this == o) return true;</span>
-<span class="pc bpc" id="L195" title="1 of 4 branches missed.">            if (o == null || getClass() != o.getClass()) return false;</span>
-<span class="fc" id="L196">            Position position = (Position) o;</span>
-<span class="fc bfc" id="L197" title="All 4 branches covered.">            return x == position.x &amp;&amp; y == position.y;</span>
+<span class="pc bpc" id="L212" title="1 of 2 branches missed.">            if (this == o) return true;</span>
+<span class="pc bpc" id="L213" title="1 of 4 branches missed.">            if (o == null || getClass() != o.getClass()) return false;</span>
+<span class="fc" id="L214">            Position position = (Position) o;</span>
+<span class="pc bpc" id="L215" title="1 of 4 branches missed.">            return x == position.x &amp;&amp; y == position.y;</span>
         }
 
         @Override
         public int hashCode() {
-<span class="fc" id="L202">            return 31 * 31 + 31 * x + y;</span>
+<span class="fc" id="L220">            return 31 * 31 + 31 * x + y;</span>
         }
 
         @Override
         public String toString() {
-<span class="fc" id="L207">            return &quot;(&quot; + x + &quot;, &quot; + y + &quot;)&quot;;</span>
+<span class="fc" id="L225">            return &quot;(&quot; + x + &quot;, &quot; + y + &quot;)&quot;;</span>
         }
     }
 
@@ -213,32 +231,37 @@ public class RobotNavigationSolution {
     public static class Robot {
         private Position position;
         private Direction direction;
+        private final java.util.List&lt;Position&gt; moveHistory;
 
-<span class="fc" id="L217">        public Robot() {</span>
-<span class="fc" id="L218">            this.position = new Position(0, 0);</span>
-<span class="fc" id="L219">            this.direction = Direction.NORTH;</span>
-<span class="fc" id="L220">        }</span>
+<span class="fc" id="L236">        public Robot() {</span>
+<span class="fc" id="L237">            this.position = new Position(0, 0);</span>
+<span class="fc" id="L238">            this.direction = Direction.NORTH;</span>
+<span class="fc" id="L239">            this.moveHistory = new java.util.ArrayList&lt;&gt;();</span>
+<span class="fc" id="L240">            this.moveHistory.add(this.position); // Record initial position</span>
+<span class="fc" id="L241">        }</span>
 
-<span class="fc" id="L222">        public Robot(Position position, Direction direction) {</span>
-<span class="fc" id="L223">            this.position = position;</span>
-<span class="fc" id="L224">            this.direction = direction;</span>
-<span class="fc" id="L225">        }</span>
+<span class="fc" id="L243">        public Robot(Position position, Direction direction) {</span>
+<span class="fc" id="L244">            this.position = position;</span>
+<span class="fc" id="L245">            this.direction = direction;</span>
+<span class="fc" id="L246">            this.moveHistory = new java.util.ArrayList&lt;&gt;();</span>
+<span class="fc" id="L247">            this.moveHistory.add(this.position); // Record initial position</span>
+<span class="fc" id="L248">        }</span>
 
         public Position getPosition() {
-<span class="fc" id="L228">            return position;</span>
+<span class="fc" id="L251">            return position;</span>
         }
 
         public Direction getDirection() {
-<span class="fc" id="L232">            return direction;</span>
+<span class="fc" id="L255">            return direction;</span>
         }
 
         public void turnLeft() {
-<span class="fc" id="L236">            direction = direction.turnLeft();</span>
-<span class="fc" id="L237">        }</span>
+<span class="fc" id="L259">            direction = direction.turnLeft();</span>
+<span class="fc" id="L260">        }</span>
 
         public void turnRight() {
-<span class="fc" id="L240">            direction = direction.turnRight();</span>
-<span class="fc" id="L241">        }</span>
+<span class="fc" id="L263">            direction = direction.turnRight();</span>
+<span class="fc" id="L264">        }</span>
 
         /**
          * Move forward by given steps. Stops if obstacle encountered.
@@ -247,19 +270,20 @@ public class RobotNavigationSolution {
          * @return actual steps moved (may be less if blocked), or 0 if steps is negative
          */
         public int moveForward(int steps, java.util.Set&lt;Position&gt; obstacles) {
-<span class="fc bfc" id="L250" title="All 2 branches covered.">            if (steps &lt; 0) {</span>
-<span class="fc" id="L251">                return 0; // Reject negative steps</span>
+<span class="fc bfc" id="L273" title="All 2 branches covered.">            if (steps &lt; 0) {</span>
+<span class="fc" id="L274">                return 0; // Reject negative steps</span>
             }
-<span class="fc" id="L253">            int moved = 0;</span>
-<span class="fc bfc" id="L254" title="All 2 branches covered.">            for (int i = 0; i &lt; steps; i++) {</span>
-<span class="fc" id="L255">                Position next = position.move(direction.getDx(), direction.getDy(), 1);</span>
-<span class="pc bpc" id="L256" title="1 of 4 branches missed.">                if (obstacles != null &amp;&amp; obstacles.contains(next)) {</span>
-<span class="fc" id="L257">                    break; // Blocked by obstacle</span>
+<span class="fc" id="L276">            int moved = 0;</span>
+<span class="fc bfc" id="L277" title="All 2 branches covered.">            for (int i = 0; i &lt; steps; i++) {</span>
+<span class="fc" id="L278">                Position next = position.move(direction.getDx(), direction.getDy(), 1);</span>
+<span class="fc bfc" id="L279" title="All 4 branches covered.">                if (obstacles != null &amp;&amp; obstacles.contains(next)) {</span>
+<span class="fc" id="L280">                    break; // Blocked by obstacle</span>
                 }
-<span class="fc" id="L259">                position = next;</span>
-<span class="fc" id="L260">                moved++;</span>
+<span class="fc" id="L282">                position = next;</span>
+<span class="fc" id="L283">                moveHistory.add(position); // Track movement</span>
+<span class="fc" id="L284">                moved++;</span>
             }
-<span class="fc" id="L262">            return moved;</span>
+<span class="fc" id="L286">            return moved;</span>
         }
 
         /**
@@ -269,24 +293,41 @@ public class RobotNavigationSolution {
          * @return actual steps moved (may be less if blocked), or 0 if steps is negative
          */
         public int moveBackward(int steps, java.util.Set&lt;Position&gt; obstacles) {
-<span class="fc bfc" id="L272" title="All 2 branches covered.">            if (steps &lt; 0) {</span>
-<span class="fc" id="L273">                return 0; // Reject negative steps</span>
+<span class="fc bfc" id="L296" title="All 2 branches covered.">            if (steps &lt; 0) {</span>
+<span class="fc" id="L297">                return 0; // Reject negative steps</span>
             }
-<span class="fc" id="L275">            int moved = 0;</span>
-<span class="fc bfc" id="L276" title="All 2 branches covered.">            for (int i = 0; i &lt; steps; i++) {</span>
-<span class="fc" id="L277">                Position next = position.move(-direction.getDx(), -direction.getDy(), 1);</span>
-<span class="pc bpc" id="L278" title="2 of 4 branches missed.">                if (obstacles != null &amp;&amp; obstacles.contains(next)) {</span>
-<span class="nc" id="L279">                    break; // Blocked by obstacle</span>
+<span class="fc" id="L299">            int moved = 0;</span>
+<span class="fc bfc" id="L300" title="All 2 branches covered.">            for (int i = 0; i &lt; steps; i++) {</span>
+<span class="fc" id="L301">                Position next = position.move(-direction.getDx(), -direction.getDy(), 1);</span>
+<span class="pc bpc" id="L302" title="1 of 4 branches missed.">                if (obstacles != null &amp;&amp; obstacles.contains(next)) {</span>
+<span class="nc" id="L303">                    break; // Blocked by obstacle</span>
                 }
-<span class="fc" id="L281">                position = next;</span>
-<span class="fc" id="L282">                moved++;</span>
+<span class="fc" id="L305">                position = next;</span>
+<span class="fc" id="L306">                moveHistory.add(position); // Track movement</span>
+<span class="fc" id="L307">                moved++;</span>
             }
-<span class="fc" id="L284">            return moved;</span>
+<span class="fc" id="L309">            return moved;</span>
         }
+
+        /**
+         * Get the movement history of this robot.
+         * @return unmodifiable list of positions visited (includes starting position)
+         */
+        public java.util.List&lt;Position&gt; getMoveHistory() {
+<span class="fc" id="L317">            return java.util.Collections.unmodifiableList(moveHistory);</span>
+        }
+
+        /**
+         * Clear the movement history and reset to current position.
+         */
+        public void clearHistory() {
+<span class="fc" id="L324">            moveHistory.clear();</span>
+<span class="fc" id="L325">            moveHistory.add(position);</span>
+<span class="fc" id="L326">        }</span>
 
         @Override
         public String toString() {
-<span class="nc" id="L289">            return &quot;Robot{pos=&quot; + position + &quot;, dir=&quot; + direction + &quot;}&quot;;</span>
+<span class="nc" id="L330">            return &quot;Robot{pos=&quot; + position + &quot;, dir=&quot; + direction + &quot;, historySize=&quot; + moveHistory.size() + &quot;}&quot;;</span>
         }
     }
 
@@ -298,19 +339,19 @@ public class RobotNavigationSolution {
 
     // ==================== Turn Commands ====================
 
-<span class="fc" id="L301">    public static class TurnLeft implements Command {</span>
+<span class="fc" id="L342">    public static class TurnLeft implements Command {</span>
         @Override
         public boolean execute(Robot robot, java.util.Set&lt;Position&gt; obstacles) {
-<span class="fc" id="L304">            robot.turnLeft();</span>
-<span class="fc" id="L305">            return true;</span>
+<span class="fc" id="L345">            robot.turnLeft();</span>
+<span class="fc" id="L346">            return true;</span>
         }
     }
 
-<span class="fc" id="L309">    public static class TurnRight implements Command {</span>
+<span class="fc" id="L350">    public static class TurnRight implements Command {</span>
         @Override
         public boolean execute(Robot robot, java.util.Set&lt;Position&gt; obstacles) {
-<span class="fc" id="L312">            robot.turnRight();</span>
-<span class="fc" id="L313">            return true;</span>
+<span class="fc" id="L353">            robot.turnRight();</span>
+<span class="fc" id="L354">            return true;</span>
         }
     }
 
@@ -319,36 +360,36 @@ public class RobotNavigationSolution {
     public static class MoveForward implements Command {
         private final int steps;
 
-<span class="fc" id="L322">        public MoveForward(int steps) {</span>
-<span class="fc" id="L323">            this.steps = steps;</span>
-<span class="fc" id="L324">        }</span>
+<span class="fc" id="L363">        public MoveForward(int steps) {</span>
+<span class="fc" id="L364">            this.steps = steps;</span>
+<span class="fc" id="L365">        }</span>
 
         @Override
         public boolean execute(Robot robot, java.util.Set&lt;Position&gt; obstacles) {
-<span class="fc" id="L328">            int moved = robot.moveForward(steps, obstacles);</span>
-<span class="fc bfc" id="L329" title="All 2 branches covered.">            return moved == steps; // true if all steps successful</span>
+<span class="fc" id="L369">            int moved = robot.moveForward(steps, obstacles);</span>
+<span class="fc bfc" id="L370" title="All 2 branches covered.">            return moved == steps; // true if all steps successful</span>
         }
     }
 
     public static class MoveBackward implements Command {
         private final int steps;
 
-<span class="fc" id="L336">        public MoveBackward(int steps) {</span>
-<span class="fc" id="L337">            this.steps = steps;</span>
-<span class="fc" id="L338">        }</span>
+<span class="fc" id="L377">        public MoveBackward(int steps) {</span>
+<span class="fc" id="L378">            this.steps = steps;</span>
+<span class="fc" id="L379">        }</span>
 
         @Override
         public boolean execute(Robot robot, java.util.Set&lt;Position&gt; obstacles) {
-<span class="fc" id="L342">            int moved = robot.moveBackward(steps, obstacles);</span>
-<span class="pc bpc" id="L343" title="1 of 2 branches missed.">            return moved == steps; // true if all steps successful</span>
+<span class="fc" id="L383">            int moved = robot.moveBackward(steps, obstacles);</span>
+<span class="pc bpc" id="L384" title="1 of 2 branches missed.">            return moved == steps; // true if all steps successful</span>
         }
     }
 
     // ==================== Command Parser ====================
 
-<span class="nc" id="L349">    public static class CommandParser {</span>
-<span class="fc" id="L350">        private static final java.util.regex.Pattern COMMAND_PATTERN = </span>
-<span class="fc" id="L351">            java.util.regex.Pattern.compile(&quot;([LRFB])(\\d*)&quot;);</span>
+<span class="nc" id="L390">    public static class CommandParser {</span>
+<span class="fc" id="L391">        private static final java.util.regex.Pattern COMMAND_PATTERN = </span>
+<span class="fc" id="L392">            java.util.regex.Pattern.compile(&quot;([LRFB])(\\d*)&quot;);</span>
 
         /**
          * Parse a single command string into a Command object.
@@ -358,27 +399,27 @@ public class RobotNavigationSolution {
          * @return Command object, or null if invalid
          */
         public static Command parse(String commandStr) {
-<span class="fc bfc" id="L361" title="All 4 branches covered.">            if (commandStr == null || commandStr.trim().isEmpty()) {</span>
-<span class="fc" id="L362">                return null;</span>
+<span class="fc bfc" id="L402" title="All 4 branches covered.">            if (commandStr == null || commandStr.trim().isEmpty()) {</span>
+<span class="fc" id="L403">                return null;</span>
             }
 
-<span class="fc" id="L365">            String cmd = commandStr.trim().toUpperCase();</span>
-<span class="fc" id="L366">            java.util.regex.Matcher matcher = COMMAND_PATTERN.matcher(cmd);</span>
+<span class="fc" id="L406">            String cmd = commandStr.trim().toUpperCase();</span>
+<span class="fc" id="L407">            java.util.regex.Matcher matcher = COMMAND_PATTERN.matcher(cmd);</span>
 
-<span class="fc bfc" id="L368" title="All 2 branches covered.">            if (!matcher.matches()) {</span>
-<span class="fc" id="L369">                return null;</span>
+<span class="fc bfc" id="L409" title="All 2 branches covered.">            if (!matcher.matches()) {</span>
+<span class="fc" id="L410">                return null;</span>
             }
 
-<span class="fc" id="L372">            String action = matcher.group(1);</span>
-<span class="fc" id="L373">            String stepsStr = matcher.group(2);</span>
-<span class="fc bfc" id="L374" title="All 2 branches covered.">            int steps = stepsStr.isEmpty() ? 1 : Integer.parseInt(stepsStr);</span>
+<span class="fc" id="L413">            String action = matcher.group(1);</span>
+<span class="fc" id="L414">            String stepsStr = matcher.group(2);</span>
+<span class="fc bfc" id="L415" title="All 2 branches covered.">            int steps = stepsStr.isEmpty() ? 1 : Integer.parseInt(stepsStr);</span>
 
-<span class="pc bpc" id="L376" title="1 of 5 branches missed.">            return switch (action) {</span>
-<span class="fc" id="L377">                case &quot;L&quot; -&gt; new TurnLeft();</span>
-<span class="fc" id="L378">                case &quot;R&quot; -&gt; new TurnRight();</span>
-<span class="fc" id="L379">                case &quot;F&quot; -&gt; new MoveForward(steps);</span>
-<span class="fc" id="L380">                case &quot;B&quot; -&gt; new MoveBackward(steps);</span>
-<span class="nc" id="L381">                default -&gt; null;</span>
+<span class="pc bpc" id="L417" title="1 of 5 branches missed.">            return switch (action) {</span>
+<span class="fc" id="L418">                case &quot;L&quot; -&gt; new TurnLeft();</span>
+<span class="fc" id="L419">                case &quot;R&quot; -&gt; new TurnRight();</span>
+<span class="fc" id="L420">                case &quot;F&quot; -&gt; new MoveForward(steps);</span>
+<span class="fc" id="L421">                case &quot;B&quot; -&gt; new MoveBackward(steps);</span>
+<span class="nc" id="L422">                default -&gt; null;</span>
             };
         }
     }

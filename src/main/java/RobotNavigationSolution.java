@@ -94,6 +94,7 @@ public class RobotNavigationSolution {
 
     /**
      * Navigate a specific robot using a list of command strings.
+     * Other robots on the board act as obstacles.
      * 
      * @param robotId the robot to navigate
      * @param commandStrs list of command strings (e.g., "F3", "R", "B2")
@@ -105,10 +106,27 @@ public class RobotNavigationSolution {
             return null;
         }
         
+        // Build combined obstacles: static obstacles + other robots' positions
+        java.util.Set<Position> allObstacles = new java.util.HashSet<>(obstacles);
+        for (java.util.Map.Entry<String, Robot> entry : robots.entrySet()) {
+            if (!entry.getKey().equals(robotId)) {
+                allObstacles.add(entry.getValue().getPosition());
+            }
+        }
+        
         for (String cmdStr : commandStrs) {
             Command command = CommandParser.parse(cmdStr);
             if (command != null) {
-                command.execute(robot, obstacles);
+                command.execute(robot, allObstacles);
+                
+                // Update obstacles as this robot moves (other robots may still block)
+                allObstacles.clear();
+                allObstacles.addAll(obstacles);
+                for (java.util.Map.Entry<String, Robot> entry : robots.entrySet()) {
+                    if (!entry.getKey().equals(robotId)) {
+                        allObstacles.add(entry.getValue().getPosition());
+                    }
+                }
             }
         }
         return robot.getPosition();
@@ -213,15 +231,20 @@ public class RobotNavigationSolution {
     public static class Robot {
         private Position position;
         private Direction direction;
+        private final java.util.List<Position> moveHistory;
 
         public Robot() {
             this.position = new Position(0, 0);
             this.direction = Direction.NORTH;
+            this.moveHistory = new java.util.ArrayList<>();
+            this.moveHistory.add(this.position); // Record initial position
         }
 
         public Robot(Position position, Direction direction) {
             this.position = position;
             this.direction = direction;
+            this.moveHistory = new java.util.ArrayList<>();
+            this.moveHistory.add(this.position); // Record initial position
         }
 
         public Position getPosition() {
@@ -257,6 +280,7 @@ public class RobotNavigationSolution {
                     break; // Blocked by obstacle
                 }
                 position = next;
+                moveHistory.add(position); // Track movement
                 moved++;
             }
             return moved;
@@ -279,14 +303,31 @@ public class RobotNavigationSolution {
                     break; // Blocked by obstacle
                 }
                 position = next;
+                moveHistory.add(position); // Track movement
                 moved++;
             }
             return moved;
         }
 
+        /**
+         * Get the movement history of this robot.
+         * @return unmodifiable list of positions visited (includes starting position)
+         */
+        public java.util.List<Position> getMoveHistory() {
+            return java.util.Collections.unmodifiableList(moveHistory);
+        }
+
+        /**
+         * Clear the movement history and reset to current position.
+         */
+        public void clearHistory() {
+            moveHistory.clear();
+            moveHistory.add(position);
+        }
+
         @Override
         public String toString() {
-            return "Robot{pos=" + position + ", dir=" + direction + "}";
+            return "Robot{pos=" + position + ", dir=" + direction + ", historySize=" + moveHistory.size() + "}";
         }
     }
 

@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ShortURLSolution.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sincere</a> &gt; <a href="index.source.html" class="el_package">default</a> &gt; <span class="el_source">ShortURLSolution.java</span></div><h1>ShortURLSolution.java</h1><pre class="source lang-java linenums">import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
+
+/**
+ * Short URL Solution
+ *
+ * A URL shortener service that creates short codes for long URLs
+ * and resolves short codes back to the original URLs.
+ */
+public class ShortURLSolution {
+
+    private final URLStorageRepo storage;
+    private final CodeGenerator codeGenerator;
+    private final String baseURL;
+
+<span class="fc" id="L19">    public ShortURLSolution(URLStorageRepo storage, CodeGenerator codeGenerator, String baseURL) {</span>
+<span class="fc" id="L20">        this.storage = storage;</span>
+<span class="fc" id="L21">        this.codeGenerator = codeGenerator;</span>
+<span class="fc" id="L22">        this.baseURL = baseURL;</span>
+<span class="fc" id="L23">    }</span>
+
+    /**
+     * Shorten a long URL. Returns existing mapping if already shortened.
+     */
+    public URLDataWrapper getShortURL(String longURL) {
+        // Check if already shortened
+<span class="fc" id="L30">        String existingCode = storage.getCode(longURL);</span>
+<span class="fc bfc" id="L31" title="All 2 branches covered.">        if (existingCode != null) {</span>
+<span class="fc" id="L32">            return new URLDataWrapper(existingCode, baseURL + existingCode, longURL);</span>
+        }
+
+        // Generate a new code
+<span class="fc" id="L36">        String code = codeGenerator.generateCode(longURL);</span>
+<span class="fc" id="L37">        storage.save(code, longURL);</span>
+<span class="fc" id="L38">        return new URLDataWrapper(code, baseURL + code, longURL);</span>
+    }
+
+    /**
+     * Resolve a short code to the original long URL.
+     */
+    public String getLongURL(String code) {
+<span class="fc" id="L45">        return storage.getLongURL(code);</span>
+    }
+
+    // ==================== URLDataWrapper ====================
+
+    /**
+     * Bundles the short code, full short URL, and original long URL.
+     */
+    public static class URLDataWrapper {
+        private final String code;
+        private final String shortURL;
+        private final String longURL;
+
+<span class="fc" id="L58">        public URLDataWrapper(String code, String shortURL, String longURL) {</span>
+<span class="fc" id="L59">            this.code = code;</span>
+<span class="fc" id="L60">            this.shortURL = shortURL;</span>
+<span class="fc" id="L61">            this.longURL = longURL;</span>
+<span class="fc" id="L62">        }</span>
+
+        public String getCode() {
+<span class="fc" id="L65">            return code;</span>
+        }
+
+        public String getShortURL() {
+<span class="fc" id="L69">            return shortURL;</span>
+        }
+
+        public String getLongURL() {
+<span class="fc" id="L73">            return longURL;</span>
+        }
+
+        @Override
+        public String toString() {
+<span class="fc" id="L78">            return &quot;URLDataWrapper{code='&quot; + code + &quot;', shortURL='&quot; + shortURL + &quot;', longURL='&quot; + longURL + &quot;'}&quot;;</span>
+        }
+    }
+
+    // ==================== URLStorageRepo Interface ====================
+
+    /**
+     * Interface for URL storage operations.
+     */
+    public interface URLStorageRepo {
+        void save(String code, String longURL);
+        String getLongURL(String code);
+        String getCode(String longURL);
+        boolean isCodeUsed(String code);
+    }
+
+    // ==================== InMemoryStorageRepo ====================
+
+    /**
+     * In-memory implementation of URLStorageRepo using two-way maps.
+     */
+    public static class InMemoryStorageRepo implements URLStorageRepo {
+
+        private final Map&lt;String, String&gt; codeToURL; // code → longURL
+        private final Map&lt;String, String&gt; urlToCode; // longURL → code
+
+<span class="fc" id="L104">        public InMemoryStorageRepo() {</span>
+<span class="fc" id="L105">            this.codeToURL = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L106">            this.urlToCode = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L107">        }</span>
+
+        @Override
+        public void save(String code, String longURL) {
+<span class="fc" id="L111">            codeToURL.put(code, longURL);</span>
+<span class="fc" id="L112">            urlToCode.put(longURL, code);</span>
+<span class="fc" id="L113">        }</span>
+
+        @Override
+        public String getLongURL(String code) {
+<span class="fc" id="L117">            return codeToURL.get(code);</span>
+        }
+
+        @Override
+        public String getCode(String longURL) {
+<span class="fc" id="L122">            return urlToCode.get(longURL);</span>
+        }
+
+        @Override
+        public boolean isCodeUsed(String code) {
+<span class="fc" id="L127">            return codeToURL.containsKey(code);</span>
+        }
+    }
+
+    // ==================== CodeGenerator Interface ====================
+
+    /**
+     * Interface for generating short codes.
+     */
+    public interface CodeGenerator {
+        String generateCode(String input);
+    }
+
+    // ==================== Base62CodeGenerator ====================
+
+    /**
+     * Generates short codes using a counter encoded in Base62.
+     * Guarantees uniqueness without collision.
+     */
+    public static class Base62CodeGenerator implements CodeGenerator {
+
+        private static final String BASE62_CHARS =
+            &quot;0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz&quot;;
+
+        private final AtomicLong counter;
+
+<span class="fc" id="L153">        public Base62CodeGenerator() {</span>
+<span class="fc" id="L154">            this.counter = new AtomicLong(1);</span>
+<span class="fc" id="L155">        }</span>
+
+<span class="fc" id="L157">        public Base62CodeGenerator(long startValue) {</span>
+<span class="fc" id="L158">            this.counter = new AtomicLong(startValue);</span>
+<span class="fc" id="L159">        }</span>
+
+        @Override
+        public String generateCode(String input) {
+<span class="fc" id="L163">            long value = counter.getAndIncrement();</span>
+<span class="fc" id="L164">            return encodeBase62(value);</span>
+        }
+
+        private String encodeBase62(long value) {
+<span class="fc bfc" id="L168" title="All 2 branches covered.">            if (value == 0) return String.valueOf(BASE62_CHARS.charAt(0));</span>
+
+<span class="fc" id="L170">            StringBuilder sb = new StringBuilder();</span>
+<span class="fc bfc" id="L171" title="All 2 branches covered.">            while (value &gt; 0) {</span>
+<span class="fc" id="L172">                sb.append(BASE62_CHARS.charAt((int) (value % 62)));</span>
+<span class="fc" id="L173">                value /= 62;</span>
+            }
+<span class="fc" id="L175">            return sb.reverse().toString();</span>
+        }
+    }
+
+    // ==================== MD5CodeGenerator ====================
+
+    /**
+     * Generates short codes by hashing the input with MD5
+     * and encoding the first 6 characters in Base62.
+     */
+<span class="fc" id="L185">    public static class MD5CodeGenerator implements CodeGenerator {</span>
+
+        private static final String BASE62_CHARS =
+            &quot;0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz&quot;;
+        private static final int CODE_LENGTH = 6;
+
+        @Override
+        public String generateCode(String input) {
+            try {
+<span class="fc" id="L194">                MessageDigest md = MessageDigest.getInstance(&quot;MD5&quot;);</span>
+<span class="fc" id="L195">                byte[] digest = md.digest(input.getBytes());</span>
+
+                // Convert first 8 bytes to a positive long
+<span class="fc" id="L198">                long value = 0;</span>
+<span class="fc bfc" id="L199" title="All 2 branches covered.">                for (int i = 0; i &lt; 8; i++) {</span>
+<span class="fc" id="L200">                    value = (value &lt;&lt; 8) | (digest[i] &amp; 0xFF);</span>
+                }
+<span class="fc" id="L202">                value = Math.abs(value);</span>
+
+                // Encode to Base62 and take first CODE_LENGTH characters
+<span class="fc" id="L205">                StringBuilder sb = new StringBuilder();</span>
+<span class="fc bfc" id="L206" title="All 2 branches covered.">                for (int i = 0; i &lt; CODE_LENGTH; i++) {</span>
+<span class="fc" id="L207">                    sb.append(BASE62_CHARS.charAt((int) (value % 62)));</span>
+<span class="fc" id="L208">                    value /= 62;</span>
+                }
+<span class="fc" id="L210">                return sb.toString();</span>
+
+<span class="nc" id="L212">            } catch (NoSuchAlgorithmException e) {</span>
+<span class="nc" id="L213">                throw new RuntimeException(&quot;MD5 algorithm not available&quot;, e);</span>
+            }
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>
