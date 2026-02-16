@@ -8,8 +8,5 @@
 !*.java
 !*.md
 
-# Allow pom.xml for build config
-!pom.xml
-
 # Allow .gitignore itself
 !.gitignore

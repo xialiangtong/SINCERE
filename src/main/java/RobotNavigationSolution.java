@@ -1,426 +1,294 @@
-/**
- * Robot Navigation Solution
- * 
- * Robot starts at (0,0) facing North on an infinite 2D grid.
- * Executes commands (L/R/F/B) and avoids obstacles.
- */
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+
 public class RobotNavigationSolution {
 
-    // ==================== Instance Fields ====================
-
-    private final java.util.Map<String, Robot> robots = new java.util.HashMap<>();
-    private java.util.Set<Position> obstacles = new java.util.HashSet<>();
-    private static final String DEFAULT_ROBOT_ID = "default";
-
-    public RobotNavigationSolution() {
-        // Create a default robot
-        robots.put(DEFAULT_ROBOT_ID, new Robot());
-    }
-
-    // ==================== Robot Management ====================
-
-    /**
-     * Add a new robot with the given ID.
-     * @param robotId unique identifier for the robot
-     * @return the newly created robot
-     */
-    public Robot addRobot(String robotId) {
-        Robot robot = new Robot();
-        robots.put(robotId, robot);
-        return robot;
-    }
-
-    /**
-     * Add a new robot with the given ID at specified position and direction.
-     */
-    public Robot addRobot(String robotId, Position position, Direction direction) {
-        Robot robot = new Robot(position, direction);
-        robots.put(robotId, robot);
-        return robot;
-    }
-
-    /**
-     * Get a robot by ID.
-     * @return the robot, or null if not found
-     */
-    public Robot getRobot(String robotId) {
-        return robots.get(robotId);
-    }
-
-    /**
-     * Get the default robot.
-     */
-    public Robot getRobot() {
-        return robots.get(DEFAULT_ROBOT_ID);
-    }
-
-    /**
-     * Remove a robot by ID.
-     * @return true if robot was removed
-     */
-    public boolean removeRobot(String robotId) {
-        return robots.remove(robotId) != null;
-    }
-
-    /**
-     * Reset a robot to initial state (position 0,0 facing NORTH).
-     */
-    public void resetRobot(String robotId) {
-        Robot robot = robots.get(robotId);
-        if (robot != null) {
-            robots.put(robotId, new Robot());
-        }
-    }
-
-    /**
-     * Get all robot IDs.
-     */
-    public java.util.Set<String> getRobotIds() {
-        return robots.keySet();
-    }
-
-    // ==================== Navigation ====================
-
-    /**
-     * Navigate robot using a list of command strings.
-     * Uses the default robot.
-     * 
-     * @param commandStrs list of command strings (e.g., "F3", "R", "B2")
-     * @return final position of the robot
-     */
-    public Position robotNavigate(java.util.List<String> commandStrs) {
-        return robotNavigate(DEFAULT_ROBOT_ID, commandStrs);
-    }
-
-    /**
-     * Navigate a specific robot using a list of command strings.
-     * Other robots on the board act as obstacles.
-     * 
-     * @param robotId the robot to navigate
-     * @param commandStrs list of command strings (e.g., "F3", "R", "B2")
-     * @return final position of the robot, or null if robot not found
-     */
-    public Position robotNavigate(String robotId, java.util.List<String> commandStrs) {
-        Robot robot = robots.get(robotId);
-        if (robot == null) {
-            return null;
-        }
-        
-        // Build combined obstacles: static obstacles + other robots' positions
-        java.util.Set<Position> allObstacles = new java.util.HashSet<>(obstacles);
-        for (java.util.Map.Entry<String, Robot> entry : robots.entrySet()) {
-            if (!entry.getKey().equals(robotId)) {
-                allObstacles.add(entry.getValue().getPosition());
-            }
-        }
-        
-        for (String cmdStr : commandStrs) {
-            Command command = CommandParser.parse(cmdStr);
-            if (command != null) {
-                command.execute(robot, allObstacles);
-                
-                // Update obstacles as this robot moves (other robots may still block)
-                allObstacles.clear();
-                allObstacles.addAll(obstacles);
-                for (java.util.Map.Entry<String, Robot> entry : robots.entrySet()) {
-                    if (!entry.getKey().equals(robotId)) {
-                        allObstacles.add(entry.getValue().getPosition());
-                    }
-                }
-            }
-        }
-        return robot.getPosition();
-    }
-
-    /**
-     * Set obstacles for the navigation.
-     */
-    public void setObstacles(java.util.Set<Position> obstacles) {
-        this.obstacles = obstacles != null ? obstacles : new java.util.HashSet<>();
-    }
-
-    // ==================== Direction Enum ====================
-
-    public enum Direction {
+    // ──────────────────────────────────────────────
+    // 1. Direction Enum
+    // ──────────────────────────────────────────────
+    enum Direction {
+        NORTH(0, 1),
         EAST(1, 0),
         SOUTH(0, -1),
-        WEST(-1, 0),
-        NORTH(0, 1);
+        WEST(-1, 0);
 
-        private final int dx;
-        private final int dy;
+        final int dx;
+        final int dy;
 
         Direction(int dx, int dy) {
             this.dx = dx;
             this.dy = dy;
         }
 
-        public int getDx() {
-            return dx;
-        }
-
-        public int getDy() {
-            return dy;
-        }
-
-        /**
-         * Turn left 90 degrees (counter-clockwise).
-         * NORTH -> WEST -> SOUTH -> EAST -> NORTH
-         */
-        public Direction turnLeft() {
+        Direction turnLeft() {
             return values()[(ordinal() + 3) % 4];
         }
 
-        /**
-         * Turn right 90 degrees (clockwise).
-         * NORTH -> EAST -> SOUTH -> WEST -> NORTH
-         */
-        public Direction turnRight() {
+        Direction turnRight() {
             return values()[(ordinal() + 1) % 4];
         }
     }
 
-    // ==================== Position Class ====================
-
-    public static class Position {
+    // ──────────────────────────────────────────────
+    // 2. Position (immutable)
+    // ──────────────────────────────────────────────
+    static class Position {
         private final int x;
         private final int y;
 
-        public Position(int x, int y) {
+        Position(int x, int y) {
             this.x = x;
             this.y = y;
         }
 
-        public int getX() {
-            return x;
-        }
+        int getX() { return x; }
+        int getY() { return y; }
 
-        public int getY() {
-            return y;
-        }
-
-        /**
-         * Move position by given steps in the specified direction.
-         * Returns a new Position.
-         */
-        public Position move(int dx, int dy, int steps) {
-            return new Position(x + dx * steps, y + dy * steps);
+        Position translate(int dx, int dy) {
+            return new Position(x + dx, y + dy);
         }
 
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            Position position = (Position) o;
-            return x == position.x && y == position.y;
+            if (!(o instanceof Position)) return false;
+            Position p = (Position) o;
+            return x == p.x && y == p.y;
         }
 
         @Override
         public int hashCode() {
-            return 31 * 31 + 31 * x + y;
+            return Objects.hash(x, y);
         }
 
         @Override
         public String toString() {
-            return "(" + x + ", " + y + ")";
+            return "(" + x + "," + y + ")";
         }
     }
 
-    // ==================== Robot Class ====================
-
-    public static class Robot {
+    // ──────────────────────────────────────────────
+    // 3. Robot
+    // ──────────────────────────────────────────────
+    static class Robot {
+        private final int id;
         private Position position;
         private Direction direction;
-        private final java.util.List<Position> moveHistory;
+        private final List<Position> history;
 
-        public Robot() {
-            this.position = new Position(0, 0);
-            this.direction = Direction.NORTH;
-            this.moveHistory = new java.util.ArrayList<>();
-            this.moveHistory.add(this.position); // Record initial position
-        }
-
-        public Robot(Position position, Direction direction) {
+        Robot(int id, Position position, Direction direction) {
+            this.id = id;
             this.position = position;
             this.direction = direction;
-            this.moveHistory = new java.util.ArrayList<>();
-            this.moveHistory.add(this.position); // Record initial position
+            this.history = new ArrayList<>();
+            this.history.add(position);
         }
 
-        public Position getPosition() {
-            return position;
+        Robot(int id) {
+            this(id, new Position(0, 0), Direction.NORTH);
         }
 
-        public Direction getDirection() {
-            return direction;
+        int getId() { return id; }
+
+        Position getPosition() {
+            return this.position;
         }
 
-        public void turnLeft() {
+        Direction getDirection() { return direction; }
+
+        List<Position> getHistory() {
+            return Collections.unmodifiableList(history);
+        }
+
+        Boolean moveForward(int steps, Set<Position> obstacles) {
+            for (int i = 0; i < steps; i++) {
+                Position next = position.translate(direction.dx, direction.dy);
+                if (obstacles.contains(next)) {
+                    return false;
+                }
+                position = next;
+                history.add(position);
+            }
+            return true;
+        }
+
+        Boolean moveBackward(int steps, Set<Position> obstacles) {
+            for (int i = 0; i < steps; i++) {
+                Position next = position.translate(-direction.dx, -direction.dy);
+                if (obstacles.contains(next)) {
+                    return false;
+                }
+                position = next;
+                history.add(position);
+            }
+            return true;
+        }
+
+        void turnLeft() {
             direction = direction.turnLeft();
         }
 
-        public void turnRight() {
+        void turnRight() {
             direction = direction.turnRight();
-        }
-
-        /**
-         * Move forward by given steps. Stops if obstacle encountered.
-         * @param steps number of steps to move (must be non-negative)
-         * @param obstacles set of obstacle positions (can be null)
-         * @return actual steps moved (may be less if blocked), or 0 if steps is negative
-         */
-        public int moveForward(int steps, java.util.Set<Position> obstacles) {
-            if (steps < 0) {
-                return 0; // Reject negative steps
-            }
-            int moved = 0;
-            for (int i = 0; i < steps; i++) {
-                Position next = position.move(direction.getDx(), direction.getDy(), 1);
-                if (obstacles != null && obstacles.contains(next)) {
-                    break; // Blocked by obstacle
-                }
-                position = next;
-                moveHistory.add(position); // Track movement
-                moved++;
-            }
-            return moved;
-        }
-
-        /**
-         * Move backward by given steps. Stops if obstacle encountered.
-         * @param steps number of steps to move (must be non-negative)
-         * @param obstacles set of obstacle positions (can be null)
-         * @return actual steps moved (may be less if blocked), or 0 if steps is negative
-         */
-        public int moveBackward(int steps, java.util.Set<Position> obstacles) {
-            if (steps < 0) {
-                return 0; // Reject negative steps
-            }
-            int moved = 0;
-            for (int i = 0; i < steps; i++) {
-                Position next = position.move(-direction.getDx(), -direction.getDy(), 1);
-                if (obstacles != null && obstacles.contains(next)) {
-                    break; // Blocked by obstacle
-                }
-                position = next;
-                moveHistory.add(position); // Track movement
-                moved++;
-            }
-            return moved;
-        }
-
-        /**
-         * Get the movement history of this robot.
-         * @return unmodifiable list of positions visited (includes starting position)
-         */
-        public java.util.List<Position> getMoveHistory() {
-            return java.util.Collections.unmodifiableList(moveHistory);
-        }
-
-        /**
-         * Clear the movement history and reset to current position.
-         */
-        public void clearHistory() {
-            moveHistory.clear();
-            moveHistory.add(position);
         }
 
         @Override
         public String toString() {
-            return "Robot{pos=" + position + ", dir=" + direction + ", historySize=" + moveHistory.size() + "}";
+            return "Robot{id='" + id + "', pos=" + position + ", dir=" + direction + "}";
         }
     }
 
-    // ==================== Command Interface ====================
-
-    public interface Command {
-        boolean execute(Robot robot, java.util.Set<Position> obstacles);
+    // ──────────────────────────────────────────────
+    // 4. Command Interface
+    // ──────────────────────────────────────────────
+    interface Command {
+        Boolean execute(Robot robot, Set<Position> obstacles);
     }
 
-    // ==================== Turn Commands ====================
-
-    public static class TurnLeft implements Command {
+    // ──────────────────────────────────────────────
+    // 5. Command Implementations
+    // ──────────────────────────────────────────────
+    static class TurnLeftCommand implements Command {
         @Override
-        public boolean execute(Robot robot, java.util.Set<Position> obstacles) {
+        public Boolean execute(Robot robot, Set<Position> obstacles) {
             robot.turnLeft();
             return true;
         }
     }
 
-    public static class TurnRight implements Command {
+    static class TurnRightCommand implements Command {
         @Override
-        public boolean execute(Robot robot, java.util.Set<Position> obstacles) {
+        public Boolean execute(Robot robot, Set<Position> obstacles) {
             robot.turnRight();
             return true;
         }
     }
 
-    // ==================== Move Commands ====================
-
-    public static class MoveForward implements Command {
+    static class MoveForwardCommand implements Command {
         private final int steps;
 
-        public MoveForward(int steps) {
+        MoveForwardCommand(int steps) {
             this.steps = steps;
         }
 
         @Override
-        public boolean execute(Robot robot, java.util.Set<Position> obstacles) {
-            int moved = robot.moveForward(steps, obstacles);
-            return moved == steps; // true if all steps successful
+        public Boolean execute(Robot robot, Set<Position> obstacles) {
+            return robot.moveForward(steps, obstacles);
         }
     }
 
-    public static class MoveBackward implements Command {
+    static class MoveBackwardCommand implements Command {
         private final int steps;
 
-        public MoveBackward(int steps) {
+        MoveBackwardCommand(int steps) {
             this.steps = steps;
         }
 
         @Override
-        public boolean execute(Robot robot, java.util.Set<Position> obstacles) {
-            int moved = robot.moveBackward(steps, obstacles);
-            return moved == steps; // true if all steps successful
+        public Boolean execute(Robot robot, Set<Position> obstacles) {
+            return robot.moveBackward(steps, obstacles);
         }
     }
 
-    // ==================== Command Parser ====================
+    // ──────────────────────────────────────────────
+    // 6. CommandParser
+    // ──────────────────────────────────────────────
+    static class CommandParser {
 
-    public static class CommandParser {
-        private static final java.util.regex.Pattern COMMAND_PATTERN = 
-            java.util.regex.Pattern.compile("([LRFB])(\\d*)");
-
-        /**
-         * Parse a single command string into a Command object.
-         * Valid formats: "L", "R", "F", "F3", "B", "B2"
-         * 
-         * @param commandStr command string (e.g., "L", "R", "F3", "B2")
-         * @return Command object, or null if invalid
-         */
-        public static Command parse(String commandStr) {
-            if (commandStr == null || commandStr.trim().isEmpty()) {
+        Command parseCommandStr(String command) {
+            if (command == null || command.isEmpty()) {
                 return null;
             }
-
-            String cmd = commandStr.trim().toUpperCase();
-            java.util.regex.Matcher matcher = COMMAND_PATTERN.matcher(cmd);
-
-            if (!matcher.matches()) {
-                return null;
+            char type = Character.toUpperCase(command.charAt(0));
+            switch (type) {
+                case 'L':
+                    return new TurnLeftCommand();
+                case 'R':
+                    return new TurnRightCommand();
+                case 'F': {
+                    try {
+                        int steps = command.length() > 1 ? Integer.parseInt(command.substring(1)) : 1;
+                        return steps > 0 ? new MoveForwardCommand(steps) : null;
+                    } catch (NumberFormatException e) {
+                        return null;
+                    }
+                }
+                case 'B': {
+                    try {
+                        int steps = command.length() > 1 ? Integer.parseInt(command.substring(1)) : 1;
+                        return steps > 0 ? new MoveBackwardCommand(steps) : null;
+                    } catch (NumberFormatException e) {
+                        return null;
+                    }
+                }
+                default:
+                    return null;
             }
-
-            String action = matcher.group(1);
-            String stepsStr = matcher.group(2);
-            int steps = stepsStr.isEmpty() ? 1 : Integer.parseInt(stepsStr);
-
-            return switch (action) {
-                case "L" -> new TurnLeft();
-                case "R" -> new TurnRight();
-                case "F" -> new MoveForward(steps);
-                case "B" -> new MoveBackward(steps);
-                default -> null;
-            };
         }
+    }
+
+    // ──────────────────────────────────────────────
+    // 7. Top-level orchestration
+    // ──────────────────────────────────────────────
+    private final Map<Integer, Robot> robotMap;
+    private final Set<Position> obstacles;
+    private final CommandParser parser;
+
+    public RobotNavigationSolution(Set<Position> obstacles) {
+        this.robotMap = new HashMap<>();
+        this.obstacles = obstacles != null ? new HashSet<>(obstacles) : new HashSet<>();
+        this.parser = new CommandParser();
+    }
+
+    public RobotNavigationSolution() {
+        this(new HashSet<>());
+    }
+
+    public void addRobot(Robot robot) {
+        if (robot == null) {
+            throw new IllegalArgumentException("Robot cannot be null");
+        }
+        robotMap.put(robot.getId(), robot);
+    }
+
+    public Robot removeRobot(int id) {
+        return robotMap.remove(id);
+    }
+
+    public Robot getRobot(int id) {
+        return robotMap.get(id);
+    }
+
+    public Position robotNavigate(int robotId, List<String> commandStrs) {
+        Robot robot = robotMap.get(robotId);
+        if (robot == null) {
+            throw new IllegalArgumentException("Robot not found: " + robotId);
+        }
+        if (commandStrs == null || commandStrs.isEmpty()) {
+            return robot.getPosition();
+        }
+        // Build effective obstacles: static obstacles + other robots' current positions
+        Set<Position> effectiveObstacles = new HashSet<>(obstacles);
+        for (Map.Entry<Integer, Robot> entry : robotMap.entrySet()) {
+            if (entry.getKey() != robotId) {
+                effectiveObstacles.add(entry.getValue().getPosition());
+            }
+        }
+        if (effectiveObstacles.contains(robot.getPosition())) {
+            return robot.getPosition();
+        }
+        for (String cmdStr : commandStrs) {
+            Command command = parser.parseCommandStr(cmdStr);
+            if (command != null) {
+                command.execute(robot, effectiveObstacles);
+            }
+        }
+        return robot.getPosition();
     }
 }

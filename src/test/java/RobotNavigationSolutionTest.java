@@ -1,1073 +1,889 @@
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.util.*;
-
-/**
- * Test cases for RobotNavigationSolution
- */
+@DisplayName("RobotNavigationSolution Tests")
 public class RobotNavigationSolutionTest {
 
+    private RobotNavigationSolution.Robot robot;
     private RobotNavigationSolution solution;
 
     @BeforeEach
     void setUp() {
+        robot = new RobotNavigationSolution.Robot(1);
         solution = new RobotNavigationSolution();
+        solution.addRobot(robot);
     }
 
-    // ==================== Direction Enum Tests ====================
-
+    // ──────────────────────────────────────────────────────
+    // 1. Invalid command strings
+    // ──────────────────────────────────────────────────────
     @Nested
-    @DisplayName("Direction Enum Tests")
-    class DirectionTests {
-
-        @Test
-        @DisplayName("Direction has correct dx/dy values")
-        void testDirectionValues() {
-            assertEquals(1, RobotNavigationSolution.Direction.EAST.getDx());
-            assertEquals(0, RobotNavigationSolution.Direction.EAST.getDy());
-
-            assertEquals(0, RobotNavigationSolution.Direction.SOUTH.getDx());
-            assertEquals(-1, RobotNavigationSolution.Direction.SOUTH.getDy());
-
-            assertEquals(-1, RobotNavigationSolution.Direction.WEST.getDx());
-            assertEquals(0, RobotNavigationSolution.Direction.WEST.getDy());
-
-            assertEquals(0, RobotNavigationSolution.Direction.NORTH.getDx());
-            assertEquals(1, RobotNavigationSolution.Direction.NORTH.getDy());
-        }
-
-        @Test
-        @DisplayName("turnLeft rotates counter-clockwise")
-        void testTurnLeft() {
-            assertEquals(RobotNavigationSolution.Direction.WEST, 
-                RobotNavigationSolution.Direction.NORTH.turnLeft());
-            assertEquals(RobotNavigationSolution.Direction.SOUTH, 
-                RobotNavigationSolution.Direction.WEST.turnLeft());
-            assertEquals(RobotNavigationSolution.Direction.EAST, 
-                RobotNavigationSolution.Direction.SOUTH.turnLeft());
-            assertEquals(RobotNavigationSolution.Direction.NORTH, 
-                RobotNavigationSolution.Direction.EAST.turnLeft());
-        }
-
-        @Test
-        @DisplayName("turnRight rotates clockwise")
-        void testTurnRight() {
-            assertEquals(RobotNavigationSolution.Direction.EAST, 
-                RobotNavigationSolution.Direction.NORTH.turnRight());
-            assertEquals(RobotNavigationSolution.Direction.SOUTH, 
-                RobotNavigationSolution.Direction.EAST.turnRight());
-            assertEquals(RobotNavigationSolution.Direction.WEST, 
-                RobotNavigationSolution.Direction.SOUTH.turnRight());
-            assertEquals(RobotNavigationSolution.Direction.NORTH, 
-                RobotNavigationSolution.Direction.WEST.turnRight());
-        }
-
-        @Test
-        @DisplayName("Four left turns return to original direction")
-        void testFourLeftTurns() {
-            RobotNavigationSolution.Direction dir = RobotNavigationSolution.Direction.NORTH;
-            dir = dir.turnLeft().turnLeft().turnLeft().turnLeft();
-            assertEquals(RobotNavigationSolution.Direction.NORTH, dir);
-        }
-
-        @Test
-        @DisplayName("Four right turns return to original direction")
-        void testFourRightTurns() {
-            RobotNavigationSolution.Direction dir = RobotNavigationSolution.Direction.NORTH;
-            dir = dir.turnRight().turnRight().turnRight().turnRight();
-            assertEquals(RobotNavigationSolution.Direction.NORTH, dir);
-        }
-    }
-
-    // ==================== Position Class Tests ====================
-
-    @Nested
-    @DisplayName("Position Class Tests")
-    class PositionTests {
-
-        @Test
-        @DisplayName("Position stores x and y correctly")
-        void testPositionValues() {
-            RobotNavigationSolution.Position pos = new RobotNavigationSolution.Position(3, 5);
-            assertEquals(3, pos.getX());
-            assertEquals(5, pos.getY());
-        }
-
-        @Test
-        @DisplayName("Position move returns new position")
-        void testPositionMove() {
-            RobotNavigationSolution.Position pos = new RobotNavigationSolution.Position(0, 0);
-            RobotNavigationSolution.Position newPos = pos.move(1, 0, 3); // Move east 3 steps
-            
-            assertEquals(3, newPos.getX());
-            assertEquals(0, newPos.getY());
-            // Original unchanged
-            assertEquals(0, pos.getX());
-            assertEquals(0, pos.getY());
-        }
-
-        @Test
-        @DisplayName("Position equals works correctly")
-        void testPositionEquals() {
-            RobotNavigationSolution.Position pos1 = new RobotNavigationSolution.Position(2, 3);
-            RobotNavigationSolution.Position pos2 = new RobotNavigationSolution.Position(2, 3);
-            RobotNavigationSolution.Position pos3 = new RobotNavigationSolution.Position(3, 2);
-
-            assertEquals(pos1, pos2);
-            assertNotEquals(pos1, pos3);
-            assertNotEquals(pos1, null);
-        }
-
-        @Test
-        @DisplayName("Position hashCode is consistent with equals")
-        void testPositionHashCode() {
-            RobotNavigationSolution.Position pos1 = new RobotNavigationSolution.Position(2, 3);
-            RobotNavigationSolution.Position pos2 = new RobotNavigationSolution.Position(2, 3);
-
-            assertEquals(pos1.hashCode(), pos2.hashCode());
-        }
-
-        @Test
-        @DisplayName("Position toString formats correctly")
-        void testPositionToString() {
-            RobotNavigationSolution.Position pos = new RobotNavigationSolution.Position(5, -3);
-            assertEquals("(5, -3)", pos.toString());
-        }
-    }
-
-    // ==================== Robot Class Tests ====================
-
-    @Nested
-    @DisplayName("Robot Class Tests")
-    class RobotTests {
-
-        @Test
-        @DisplayName("Robot starts at (0,0) facing NORTH")
-        void testRobotInitialState() {
-            RobotNavigationSolution.Robot robot = new RobotNavigationSolution.Robot();
-            assertEquals(0, robot.getPosition().getX());
-            assertEquals(0, robot.getPosition().getY());
-            assertEquals(RobotNavigationSolution.Direction.NORTH, robot.getDirection());
-        }
-
-        @Test
-        @DisplayName("Robot moveForward rejects negative steps")
-        void testMoveForwardNegativeSteps() {
-            RobotNavigationSolution.Robot robot = new RobotNavigationSolution.Robot();
-            int moved = robot.moveForward(-5, null);
-            assertEquals(0, moved);
-            assertEquals(0, robot.getPosition().getX());
-            assertEquals(0, robot.getPosition().getY());
-        }
-
-        @Test
-        @DisplayName("Robot moveBackward rejects negative steps")
-        void testMoveBackwardNegativeSteps() {
-            RobotNavigationSolution.Robot robot = new RobotNavigationSolution.Robot();
-            int moved = robot.moveBackward(-5, null);
-            assertEquals(0, moved);
-            assertEquals(0, robot.getPosition().getX());
-            assertEquals(0, robot.getPosition().getY());
-        }
-
-        @Test
-        @DisplayName("Robot tracks initial position in history")
-        void testRobotInitialHistory() {
-            RobotNavigationSolution.Robot robot = new RobotNavigationSolution.Robot();
-            java.util.List<RobotNavigationSolution.Position> history = robot.getMoveHistory();
-            
-            assertEquals(1, history.size());
-            assertEquals(0, history.get(0).getX());
-            assertEquals(0, history.get(0).getY());
-        }
-
-        @Test
-        @DisplayName("Robot tracks all positions during moveForward")
-        void testRobotHistoryMoveForward() {
-            RobotNavigationSolution.Robot robot = new RobotNavigationSolution.Robot();
-            robot.moveForward(3, null);
-            
-            java.util.List<RobotNavigationSolution.Position> history = robot.getMoveHistory();
-            assertEquals(4, history.size()); // initial + 3 moves
-            
-            assertEquals(0, history.get(0).getY()); // Start at (0,0)
-            assertEquals(1, history.get(1).getY()); // (0,1)
-            assertEquals(2, history.get(2).getY()); // (0,2)
-            assertEquals(3, history.get(3).getY()); // (0,3)
-        }
-
-        @Test
-        @DisplayName("Robot tracks all positions during moveBackward")
-        void testRobotHistoryMoveBackward() {
-            RobotNavigationSolution.Robot robot = new RobotNavigationSolution.Robot();
-            robot.moveBackward(2, null);
-            
-            java.util.List<RobotNavigationSolution.Position> history = robot.getMoveHistory();
-            assertEquals(3, history.size()); // initial + 2 moves
-            
-            assertEquals(0, history.get(0).getY());  // (0,0)
-            assertEquals(-1, history.get(1).getY()); // (0,-1)
-            assertEquals(-2, history.get(2).getY()); // (0,-2)
-        }
-
-        @Test
-        @DisplayName("Robot history tracks complex movement path")
-        void testRobotHistoryComplexPath() {
-            RobotNavigationSolution.Robot robot = new RobotNavigationSolution.Robot();
-            robot.moveForward(2, null);  // (0,0) -> (0,1) -> (0,2)
-            robot.turnRight();           // Now facing EAST
-            robot.moveForward(2, null);  // (0,2) -> (1,2) -> (2,2)
-            
-            java.util.List<RobotNavigationSolution.Position> history = robot.getMoveHistory();
-            assertEquals(5, history.size());
-            
-            // Verify path
-            assertEquals("(0, 0)", history.get(0).toString());
-            assertEquals("(0, 1)", history.get(1).toString());
-            assertEquals("(0, 2)", history.get(2).toString());
-            assertEquals("(1, 2)", history.get(3).toString());
-            assertEquals("(2, 2)", history.get(4).toString());
-        }
-
-        @Test
-        @DisplayName("Robot history is unmodifiable")
-        void testRobotHistoryUnmodifiable() {
-            RobotNavigationSolution.Robot robot = new RobotNavigationSolution.Robot();
-            java.util.List<RobotNavigationSolution.Position> history = robot.getMoveHistory();
-            
-            assertThrows(UnsupportedOperationException.class, () -> {
-                history.add(new RobotNavigationSolution.Position(99, 99));
-            });
-        }
-
-        @Test
-        @DisplayName("Robot clearHistory resets to current position")
-        void testRobotClearHistory() {
-            RobotNavigationSolution.Robot robot = new RobotNavigationSolution.Robot();
-            robot.moveForward(5, null);
-            assertEquals(6, robot.getMoveHistory().size());
-            
-            robot.clearHistory();
-            
-            java.util.List<RobotNavigationSolution.Position> history = robot.getMoveHistory();
-            assertEquals(1, history.size());
-            assertEquals(5, history.get(0).getY()); // Current position is (0,5)
-        }
-
-        @Test
-        @DisplayName("Blocked movement does not add to history")
-        void testRobotHistoryBlockedMovement() {
-            RobotNavigationSolution.Robot robot = new RobotNavigationSolution.Robot();
-            java.util.Set<RobotNavigationSolution.Position> obstacles = 
-                java.util.Set.of(new RobotNavigationSolution.Position(0, 1));
-            
-            robot.moveForward(5, obstacles); // Blocked at first step
-            
-            java.util.List<RobotNavigationSolution.Position> history = robot.getMoveHistory();
-            assertEquals(1, history.size()); // Only initial position
-            assertEquals(0, history.get(0).getY());
-        }
-    }
-
-    // ==================== Command Parser Tests ====================
-
-    @Nested
-    @DisplayName("CommandParser Tests")
-    class CommandParserTests {
-
-        @Test
-        @DisplayName("Parse valid commands")
-        void testParseValidCommands() {
-            assertNotNull(RobotNavigationSolution.CommandParser.parse("L"));
-            assertNotNull(RobotNavigationSolution.CommandParser.parse("R"));
-            assertNotNull(RobotNavigationSolution.CommandParser.parse("F"));
-            assertNotNull(RobotNavigationSolution.CommandParser.parse("B"));
-            assertNotNull(RobotNavigationSolution.CommandParser.parse("F3"));
-            assertNotNull(RobotNavigationSolution.CommandParser.parse("B10"));
-        }
-
-        @Test
-        @DisplayName("Parse lowercase commands")
-        void testParseLowercaseCommands() {
-            assertNotNull(RobotNavigationSolution.CommandParser.parse("l"));
-            assertNotNull(RobotNavigationSolution.CommandParser.parse("f5"));
-        }
-
-        @Test
-        @DisplayName("Parse invalid commands returns null")
-        void testParseInvalidCommands() {
-            assertNull(RobotNavigationSolution.CommandParser.parse(null));
-            assertNull(RobotNavigationSolution.CommandParser.parse(""));
-            assertNull(RobotNavigationSolution.CommandParser.parse("   "));
-            assertNull(RobotNavigationSolution.CommandParser.parse("X"));
-            assertNull(RobotNavigationSolution.CommandParser.parse("FF"));
-            assertNull(RobotNavigationSolution.CommandParser.parse("123"));
-        }
-    }
-
-    // ==================== Robot Navigation Tests ====================
-
-    @Nested
-    @DisplayName("Robot Navigation - Turn Tests")
-    class NavigationTurnTests {
-
-        @Test
-        @DisplayName("Single left turn")
-        void testSingleLeftTurn() {
-            solution.robotNavigate(Arrays.asList("L"));
-            assertEquals(RobotNavigationSolution.Direction.WEST, solution.getRobot().getDirection());
-        }
-
-        @Test
-        @DisplayName("Single right turn")
-        void testSingleRightTurn() {
-            solution.robotNavigate(Arrays.asList("R"));
-            assertEquals(RobotNavigationSolution.Direction.EAST, solution.getRobot().getDirection());
-        }
-
-        @Test
-        @DisplayName("Multiple left turns")
-        void testMultipleLeftTurns() {
-            solution.robotNavigate(Arrays.asList("L", "L"));
-            assertEquals(RobotNavigationSolution.Direction.SOUTH, solution.getRobot().getDirection());
-
-            solution.resetRobot("default");
-            solution.robotNavigate(Arrays.asList("L", "L", "L"));
-            assertEquals(RobotNavigationSolution.Direction.EAST, solution.getRobot().getDirection());
-        }
-
-        @Test
-        @DisplayName("Multiple right turns")
-        void testMultipleRightTurns() {
-            solution.robotNavigate(Arrays.asList("R", "R"));
-            assertEquals(RobotNavigationSolution.Direction.SOUTH, solution.getRobot().getDirection());
-
-            solution.resetRobot("default");
-            solution.robotNavigate(Arrays.asList("R", "R", "R"));
-            assertEquals(RobotNavigationSolution.Direction.WEST, solution.getRobot().getDirection());
-        }
-
-        @Test
-        @DisplayName("Four turns return to original direction")
-        void testFourTurns() {
-            solution.robotNavigate(Arrays.asList("L", "L", "L", "L"));
-            assertEquals(RobotNavigationSolution.Direction.NORTH, solution.getRobot().getDirection());
-
-            solution.resetRobot("default");
-            solution.robotNavigate(Arrays.asList("R", "R", "R", "R"));
-            assertEquals(RobotNavigationSolution.Direction.NORTH, solution.getRobot().getDirection());
-        }
-
-        @Test
-        @DisplayName("Mixed left and right turns")
-        void testMixedTurns() {
-            // L then R should return to NORTH
-            solution.robotNavigate(Arrays.asList("L", "R"));
-            assertEquals(RobotNavigationSolution.Direction.NORTH, solution.getRobot().getDirection());
-
-            solution.resetRobot("default");
-            // R, R, L = EAST
-            solution.robotNavigate(Arrays.asList("R", "R", "L"));
-            assertEquals(RobotNavigationSolution.Direction.EAST, solution.getRobot().getDirection());
-        }
-    }
-
-    @Nested
-    @DisplayName("Robot Navigation - Move Without Obstacles")
-    class NavigationMoveWithoutObstaclesTests {
-
-        @Test
-        @DisplayName("Move forward single step")
-        void testMoveForwardSingleStep() {
-            RobotNavigationSolution.Position pos = solution.robotNavigate(Arrays.asList("F"));
-            assertEquals(0, pos.getX());
-            assertEquals(1, pos.getY());
-        }
-
-        @Test
-        @DisplayName("Move forward multiple steps")
-        void testMoveForwardMultipleSteps() {
-            RobotNavigationSolution.Position pos = solution.robotNavigate(Arrays.asList("F5"));
-            assertEquals(0, pos.getX());
-            assertEquals(5, pos.getY());
-        }
-
-        @Test
-        @DisplayName("Move backward single step")
-        void testMoveBackwardSingleStep() {
-            RobotNavigationSolution.Position pos = solution.robotNavigate(Arrays.asList("B"));
-            assertEquals(0, pos.getX());
-            assertEquals(-1, pos.getY());
-        }
-
-        @Test
-        @DisplayName("Move backward multiple steps")
-        void testMoveBackwardMultipleSteps() {
-            RobotNavigationSolution.Position pos = solution.robotNavigate(Arrays.asList("B3"));
-            assertEquals(0, pos.getX());
-            assertEquals(-3, pos.getY());
-        }
-
-        @Test
-        @DisplayName("Move in different directions")
-        void testMoveInDifferentDirections() {
-            // Move north 2, turn right, move east 3
-            RobotNavigationSolution.Position pos = solution.robotNavigate(Arrays.asList("F2", "R", "F3"));
-            assertEquals(3, pos.getX());
-            assertEquals(2, pos.getY());
-        }
-    }
-
-    @Nested
-    @DisplayName("Robot Navigation - Move With Obstacles")
-    class NavigationMoveWithObstaclesTests {
-
-        @BeforeEach
-        void setUpObstacles() {
-            Set<RobotNavigationSolution.Position> obstacles = new HashSet<>();
-            obstacles.add(new RobotNavigationSolution.Position(0, 3));  // Obstacle at (0, 3)
-            obstacles.add(new RobotNavigationSolution.Position(2, 0));  // Obstacle at (2, 0)
-            obstacles.add(new RobotNavigationSolution.Position(-1, 0)); // Obstacle at (-1, 0)
-            solution.setObstacles(obstacles);
-        }
-
-        @Test
-        @DisplayName("Move blocked at first step")
-        void testMoveBlockedAtFirstStep() {
-            // Obstacle at (0, 3), try to move from (0, 2) to (0, 3)
-            solution.robotNavigate(Arrays.asList("F2")); // Move to (0, 2)
-            RobotNavigationSolution.Position pos = solution.robotNavigate(Arrays.asList("F")); // Blocked at (0, 3)
-            assertEquals(0, pos.getX());
-            assertEquals(2, pos.getY()); // Stays at (0, 2)
-        }
-
-        @Test
-        @DisplayName("Move blocked in the middle")
-        void testMoveBlockedInMiddle() {
-            // Obstacle at (0, 3), try F5 from origin - should stop at (0, 2)
-            RobotNavigationSolution.Position pos = solution.robotNavigate(Arrays.asList("F5"));
-            assertEquals(0, pos.getX());
-            assertEquals(2, pos.getY()); // Stopped before obstacle
-        }
-
-        @Test
-        @DisplayName("Move blocked at last step")
-        void testMoveBlockedAtLastStep() {
-            // Obstacle at (0, 3), try F3 from origin - should stop at (0, 2)
-            RobotNavigationSolution.Position pos = solution.robotNavigate(Arrays.asList("F3"));
-            assertEquals(0, pos.getX());
-            assertEquals(2, pos.getY()); // Last step blocked
-        }
-
-        @Test
-        @DisplayName("Backward move blocked")
-        void testBackwardMoveBlocked() {
-            // Start at origin facing NORTH, turn left to face WEST
-            solution.robotNavigate(Arrays.asList("L")); // Now facing WEST
-            // From (0,0) facing WEST, F1 would go to (-1, 0) which is blocked
-            // So robot stays at (0, 0)
-            RobotNavigationSolution.Position pos = solution.robotNavigate(Arrays.asList("F2"));
-            assertEquals(0, pos.getX()); // Blocked at first step, stays at origin
-            assertEquals(0, pos.getY());
-        }
-
-        @Test
-        @DisplayName("Move blocked then turn and continue")
-        void testMoveBlockedThenContinue() {
-            // Move north until blocked, turn right, move east
-            solution.robotNavigate(Arrays.asList("F5")); // Blocked at (0, 2)
-            RobotNavigationSolution.Position pos = solution.robotNavigate(Arrays.asList("R", "F2"));
-            assertEquals(2, pos.getX()); // Obstacle at (2,0) doesn't affect (2, 2)
-            assertEquals(2, pos.getY());
-        }
-
-        @Test
-        @DisplayName("No obstacle in path - full movement")
-        void testNoObstacleInPath() {
-            // Turn right, move east (no obstacles in this path up to x=1)
-            RobotNavigationSolution.Position pos = solution.robotNavigate(Arrays.asList("R", "F1"));
-            assertEquals(1, pos.getX());
-            assertEquals(0, pos.getY());
-        }
-    }
-
-    @Nested
-    @DisplayName("Robot Navigation - Combined Commands")
-    class NavigationCombinedTests {
-
-        @Test
-        @DisplayName("Square path returns to origin")
-        void testSquarePath() {
-            // Move in a square: F1, R, F1, R, F1, R, F1, R
-            RobotNavigationSolution.Position pos = solution.robotNavigate(
-                Arrays.asList("F1", "R", "F1", "R", "F1", "R", "F1", "R"));
-            assertEquals(0, pos.getX());
-            assertEquals(0, pos.getY());
-            assertEquals(RobotNavigationSolution.Direction.NORTH, solution.getRobot().getDirection());
-        }
-
-        @Test
-        @DisplayName("Complex path with forward, backward, and turns")
-        void testComplexPath() {
-            // F3, R, F2, B1, L, F1
-            // Start (0,0) N
-            // F3 -> (0,3) N
-            // R  -> (0,3) E
-            // F2 -> (2,3) E
-            // B1 -> (1,3) E (backward is west)
-            // L  -> (1,3) N
-            // F1 -> (1,4) N
-            RobotNavigationSolution.Position pos = solution.robotNavigate(
-                Arrays.asList("F3", "R", "F2", "B1", "L", "F1"));
-            assertEquals(1, pos.getX());
-            assertEquals(4, pos.getY());
-        }
-
-        @Test
-        @DisplayName("Forward and backward cancel out")
-        void testForwardBackwardCancel() {
-            RobotNavigationSolution.Position pos = solution.robotNavigate(
-                Arrays.asList("F3", "B3"));
-            assertEquals(0, pos.getX());
-            assertEquals(0, pos.getY());
-        }
-
-        @Test
-        @DisplayName("Multiple forward commands accumulate")
-        void testMultipleForwardAccumulate() {
-            RobotNavigationSolution.Position pos = solution.robotNavigate(
-                Arrays.asList("F2", "F3", "F1"));
-            assertEquals(0, pos.getX());
-            assertEquals(6, pos.getY());
-        }
-
-        @Test
-        @DisplayName("Turn around and move")
-        void testTurnAroundAndMove() {
-            // F2, turn 180, F2 should return to origin
-            RobotNavigationSolution.Position pos = solution.robotNavigate(
-                Arrays.asList("F2", "R", "R", "F2"));
-            assertEquals(0, pos.getX());
-            assertEquals(0, pos.getY());
-        }
-
-        @Test
-        @DisplayName("Navigate all four directions")
-        void testAllFourDirections() {
-            // North 1, East 1, South 1, West 1 - should return to origin
-            RobotNavigationSolution.Position pos = solution.robotNavigate(
-                Arrays.asList("F1", "R", "F1", "R", "F1", "R", "F1"));
-            assertEquals(0, pos.getX());
-            assertEquals(0, pos.getY());
-        }
-
-        @Test
-        @DisplayName("Complex path with obstacles")
-        void testComplexPathWithObstacles() {
-            Set<RobotNavigationSolution.Position> obstacles = new HashSet<>();
-            obstacles.add(new RobotNavigationSolution.Position(0, 5));
-            obstacles.add(new RobotNavigationSolution.Position(3, 4));
-            solution.setObstacles(obstacles);
-
-            // Try to go north 10 (blocked at 5), turn right, go east 5 (blocked at 3)
-            // Start (0,0) N
-            // F10 -> blocked, stops at (0, 4)
-            // R   -> (0, 4) E
-            // F5  -> blocked at (3, 4), stops at (2, 4)
-            RobotNavigationSolution.Position pos = solution.robotNavigate(
-                Arrays.asList("F10", "R", "F5"));
-            assertEquals(2, pos.getX());
-            assertEquals(4, pos.getY());
-        }
-    }
-
-    @Nested
-    @DisplayName("Robot Navigation - Edge Cases")
-    class NavigationEdgeCasesTests {
-
-        @Test
-        @DisplayName("Empty command list")
-        void testEmptyCommandList() {
-            RobotNavigationSolution.Position pos = solution.robotNavigate(Arrays.asList());
-            assertEquals(0, pos.getX());
-            assertEquals(0, pos.getY());
-        }
-
-        @Test
-        @DisplayName("Invalid commands are skipped")
-        void testInvalidCommandsSkipped() {
-            RobotNavigationSolution.Position pos = solution.robotNavigate(
-                Arrays.asList("F2", "INVALID", "F1"));
-            assertEquals(0, pos.getX());
-            assertEquals(3, pos.getY()); // Invalid command skipped
-        }
-
-        @Test
-        @DisplayName("Move zero steps (F0)")
-        void testMoveZeroSteps() {
-            RobotNavigationSolution.Position pos = solution.robotNavigate(Arrays.asList("F0"));
-            assertEquals(0, pos.getX());
-            assertEquals(0, pos.getY());
-        }
-
-        @Test
-        @DisplayName("Large number of steps")
-        void testLargeSteps() {
-            RobotNavigationSolution.Position pos = solution.robotNavigate(Arrays.asList("F100"));
-            assertEquals(0, pos.getX());
-            assertEquals(100, pos.getY());
-        }
-
-        @Test
-        @DisplayName("Negative coordinates reachable")
-        void testNegativeCoordinates() {
-            // Turn around (south) and move
-            RobotNavigationSolution.Position pos = solution.robotNavigate(
-                Arrays.asList("R", "R", "F5")); // Face south, move 5
-            assertEquals(0, pos.getX());
-            assertEquals(-5, pos.getY());
-        }
-    }
-
-    // ==================== Invalid Command Tests ====================
-
-    @Nested
-    @DisplayName("Invalid Command String Tests")
+    @DisplayName("Invalid Command Strings")
     class InvalidCommandTests {
 
         @Test
-        @DisplayName("Lowercase commands are converted to uppercase (valid)")
-        void testLowercaseCommandValid() {
-            // Parser calls toUpperCase(), so lowercase IS valid
-            RobotNavigationSolution.Position pos = solution.robotNavigate(
-                Arrays.asList("f5", "F3"));
-            assertEquals(0, pos.getX());
-            assertEquals(8, pos.getY()); // f5 (=F5) + F3 = 8
+        @DisplayName("Unknown letter command returns null from parser")
+        void unknownLetterCommand() {
+            RobotNavigationSolution.CommandParser parser = new RobotNavigationSolution.CommandParser();
+            assertNull(parser.parseCommandStr("X"));
+            assertNull(parser.parseCommandStr("Z3"));
+            assertNull(parser.parseCommandStr("G"));
         }
 
         @Test
-        @DisplayName("Command with unknown prefix is invalid")
-        void testUnknownPrefixInvalid() {
-            RobotNavigationSolution.Position pos = solution.robotNavigate(
-                Arrays.asList("X5", "F2"));
-            // X5 is invalid, F2 executes
-            assertEquals(0, pos.getX());
-            assertEquals(2, pos.getY());
+        @DisplayName("Null command returns null from parser")
+        void nullCommand() {
+            RobotNavigationSolution.CommandParser parser = new RobotNavigationSolution.CommandParser();
+            assertNull(parser.parseCommandStr(null));
         }
 
         @Test
-        @DisplayName("Move command without number defaults to 1 step")
-        void testMoveCommandWithoutNumberDefaults() {
-            // Parser regex is \d* (0 or more digits), so F alone = 1 step
-            RobotNavigationSolution.Position pos = solution.robotNavigate(
-                Arrays.asList("F", "F3"));
-            assertEquals(0, pos.getX());
-            assertEquals(4, pos.getY()); // F (=1) + F3 = 4
+        @DisplayName("Empty string returns null from parser")
+        void emptyCommand() {
+            RobotNavigationSolution.CommandParser parser = new RobotNavigationSolution.CommandParser();
+            assertNull(parser.parseCommandStr(""));
         }
 
         @Test
-        @DisplayName("Multiple invalid commands in sequence")
-        void testMultipleInvalidCommands() {
-            RobotNavigationSolution.Position pos = solution.robotNavigate(
-                Arrays.asList("GARBAGE", "123", "!!!", "F2"));
-            // All invalid except F2
-            assertEquals(0, pos.getX());
-            assertEquals(2, pos.getY());
+        @DisplayName("F with non-numeric suffix returns null")
+        void forwardWithNonNumericSuffix() {
+            RobotNavigationSolution.CommandParser parser = new RobotNavigationSolution.CommandParser();
+            assertNull(parser.parseCommandStr("Fabc"));
         }
 
         @Test
-        @DisplayName("All commands invalid returns origin")
-        void testAllCommandsInvalid() {
-            RobotNavigationSolution.Position pos = solution.robotNavigate(
-                Arrays.asList("XYZ", "ABC", "123"));
-            assertEquals(0, pos.getX());
-            assertEquals(0, pos.getY());
+        @DisplayName("F-1 negative steps returns null — robot does not move")
+        void forwardWithNegativeSteps() {
+            RobotNavigationSolution.CommandParser parser = new RobotNavigationSolution.CommandParser();
+            assertNull(parser.parseCommandStr("F-1"));
+            RobotNavigationSolution.Position result = solution.robotNavigate(1, Arrays.asList("F-1"));
+            assertEquals(new RobotNavigationSolution.Position(0, 0), result);
         }
 
         @Test
-        @DisplayName("Empty string command is invalid")
-        void testEmptyStringCommand() {
-            RobotNavigationSolution.Position pos = solution.robotNavigate(
-                Arrays.asList("", "F2"));
-            assertEquals(0, pos.getX());
-            assertEquals(2, pos.getY());
+        @DisplayName("B with non-numeric suffix returns null")
+        void backwardWithNonNumericSuffix() {
+            RobotNavigationSolution.CommandParser parser = new RobotNavigationSolution.CommandParser();
+            assertNull(parser.parseCommandStr("B!"));
         }
 
         @Test
-        @DisplayName("Leading/trailing spaces are trimmed (valid)")
-        void testCommandWithLeadingTrailingSpaces() {
-            // Parser calls trim(), so leading/trailing spaces are OK
-            RobotNavigationSolution.Position pos = solution.robotNavigate(
-                Arrays.asList(" F2", "F2 ", "F1"));
-            assertEquals(0, pos.getX());
-            assertEquals(5, pos.getY()); // " F2"(=2) + "F2 "(=2) + F1 = 5
+        @DisplayName("B-2 negative steps returns null — robot does not move")
+        void backwardWithNegativeSteps() {
+            RobotNavigationSolution.CommandParser parser = new RobotNavigationSolution.CommandParser();
+            assertNull(parser.parseCommandStr("B-2"));
+            RobotNavigationSolution.Position result = solution.robotNavigate(1, Arrays.asList("B-2"));
+            assertEquals(new RobotNavigationSolution.Position(0, 0), result);
         }
 
         @Test
-        @DisplayName("Command with internal space is invalid")
-        void testCommandWithInternalSpace() {
-            // Internal spaces make it invalid
-            RobotNavigationSolution.Position pos = solution.robotNavigate(
-                Arrays.asList("F 2", "F1"));
-            assertEquals(0, pos.getX());
-            assertEquals(1, pos.getY()); // "F 2" invalid, F1 = 1
-        }
-
-        @Test
-        @DisplayName("Move command with negative number is invalid")
-        void testMoveWithNegativeNumber() {
-            RobotNavigationSolution.Position pos = solution.robotNavigate(
-                Arrays.asList("F-5", "F2"));
-            // F-5 is invalid (parser returns null), F2 executes
-            assertEquals(0, pos.getX());
-            assertEquals(2, pos.getY());
-        }
-
-        @Test
-        @DisplayName("Turn commands with numbers are valid (numbers ignored by regex)")
-        void testTurnWithNumber() {
-            // The regex ([LRFB])(\d*) allows digits after turn commands
-            // but turnLeft/turnRight ignore the number
-            RobotNavigationSolution.Position pos = solution.robotNavigate(
-                Arrays.asList("L2", "R3", "L", "F2"));
-            // L2 (turns left), R3 (turns right, now facing NORTH), L (turns left), F2 (moves west)
-            assertEquals(-2, pos.getX());
-            assertEquals(0, pos.getY());
-        }
-
-        @Test
-        @DisplayName("Null in command list is skipped")
-        void testNullCommand() {
-            List<String> commands = new ArrayList<>();
-            commands.add("F2");
-            commands.add(null);
-            commands.add("F3");
-            RobotNavigationSolution.Position pos = solution.robotNavigate(commands);
-            assertEquals(0, pos.getX());
-            assertEquals(5, pos.getY());
-        }
-
-        @Test
-        @DisplayName("Multi-character invalid prefix")
-        void testMultiCharInvalidPrefix() {
-            RobotNavigationSolution.Position pos = solution.robotNavigate(
-                Arrays.asList("FORWARD5", "BACK2", "F1"));
-            // Both invalid, only F1 executes
-            assertEquals(0, pos.getX());
-            assertEquals(1, pos.getY());
+        @DisplayName("F0 — zero steps, robot stays in place")
+        void forwardZeroSteps() {
+            RobotNavigationSolution.Position result = solution.robotNavigate(1, Arrays.asList("F0"));
+            assertEquals(new RobotNavigationSolution.Position(0, 0), result);
         }
     }
 
-    // ==================== Multi-Robot Management Tests ====================
-
+    // ──────────────────────────────────────────────────────
+    // 2. Turn left / right / forward / backward combinations
+    // ──────────────────────────────────────────────────────
     @Nested
-    @DisplayName("Multi-Robot Management Tests")
-    class MultiRobotManagementTests {
+    @DisplayName("Movement and Turn Combinations")
+    class CombinationTests {
 
         @Test
-        @DisplayName("Add robot with position and direction")
-        void testAddAndGetRobot() {
-            solution.addRobot("robot1", 
-                new RobotNavigationSolution.Position(5, 10), 
-                RobotNavigationSolution.Direction.EAST);
-            RobotNavigationSolution.Robot robot = solution.getRobot("robot1");
-            
-            assertNotNull(robot);
-            assertEquals(5, robot.getPosition().getX());
-            assertEquals(10, robot.getPosition().getY());
-            assertEquals(RobotNavigationSolution.Direction.EAST, robot.getDirection());
+        @DisplayName("Move forward 1 step (bare F) — facing North")
+        void moveForwardOneStep() {
+            RobotNavigationSolution.Position result = solution.robotNavigate(1, Arrays.asList("F"));
+            assertEquals(new RobotNavigationSolution.Position(0, 1), result);
         }
 
         @Test
-        @DisplayName("Add robot with defaults (origin, facing NORTH)")
-        void testAddRobotDefaults() {
-            solution.addRobot("robot1");
-            RobotNavigationSolution.Robot robot = solution.getRobot("robot1");
-            
-            assertNotNull(robot);
-            assertEquals(0, robot.getPosition().getX());
-            assertEquals(0, robot.getPosition().getY());
+        @DisplayName("Move forward 3 steps — facing North")
+        void moveForwardMultipleSteps() {
+            RobotNavigationSolution.Position result = solution.robotNavigate(1, Arrays.asList("F3"));
+            assertEquals(new RobotNavigationSolution.Position(0, 3), result);
+        }
+
+        @Test
+        @DisplayName("Move backward 2 steps — facing North goes to (0,-2)")
+        void moveBackward() {
+            RobotNavigationSolution.Position result = solution.robotNavigate(1, Arrays.asList("B2"));
+            assertEquals(new RobotNavigationSolution.Position(0, -2), result);
+        }
+
+        @Test
+        @DisplayName("Turn left then move forward — faces West, moves to (-1,0)")
+        void turnLeftThenForward() {
+            RobotNavigationSolution.Position result = solution.robotNavigate(1, Arrays.asList("L", "F"));
+            assertEquals(new RobotNavigationSolution.Position(-1, 0), result);
+        }
+
+        @Test
+        @DisplayName("Turn right then move forward — faces East, moves to (1,0)")
+        void turnRightThenForward() {
+            RobotNavigationSolution.Position result = solution.robotNavigate(1, Arrays.asList("R", "F"));
+            assertEquals(new RobotNavigationSolution.Position(1, 0), result);
+        }
+
+        @Test
+        @DisplayName("Turn right, forward 2, turn right, forward 3 — ends at (2,-3)")
+        void rightForwardRightForward() {
+            // Start: (0,0) North
+            // R → East, F2 → (2,0), R → South, F3 → (2,-3)
+            RobotNavigationSolution.Position result = solution.robotNavigate(1, 
+                    Arrays.asList("R", "F2", "R", "F3"));
+            assertEquals(new RobotNavigationSolution.Position(2, -3), result);
+        }
+
+        @Test
+        @DisplayName("Square walk: F1 R F1 R F1 R F1 — returns to origin")
+        void squareWalkReturnsToOrigin() {
+            RobotNavigationSolution.Position result = solution.robotNavigate(1, 
+                    Arrays.asList("F", "R", "F", "R", "F", "R", "F"));
+            assertEquals(new RobotNavigationSolution.Position(0, 0), result);
+        }
+
+        @Test
+        @DisplayName("Forward then backward same steps — returns to origin")
+        void forwardThenBackwardCancels() {
+            RobotNavigationSolution.Position result = solution.robotNavigate(1, 
+                    Arrays.asList("F5", "B5"));
+            assertEquals(new RobotNavigationSolution.Position(0, 0), result);
+        }
+
+        @Test
+        @DisplayName("Problem example: F2 R F1 L F2 — ends at (1,4)")
+        void problemExample() {
+            // Start: (0,0) North
+            // F2 → (0,2), R → East, F1 → (1,2), L → North, F2 → (1,4)
+            RobotNavigationSolution.Position result = solution.robotNavigate(1, 
+                    Arrays.asList("F2", "R", "F1", "L", "F2"));
+            assertEquals(new RobotNavigationSolution.Position(1, 4), result);
+        }
+
+        @Test
+        @DisplayName("Turn left then backward — facing West, backward goes East to (1,0)")
+        void turnLeftThenBackward() {
+            RobotNavigationSolution.Position result = solution.robotNavigate(1, 
+                    Arrays.asList("L", "B"));
+            assertEquals(new RobotNavigationSolution.Position(1, 0), result);
+        }
+    }
+
+    // ──────────────────────────────────────────────────────
+    // 3. Continuous turns / continuous same-direction moves
+    // ──────────────────────────────────────────────────────
+    @Nested
+    @DisplayName("Continuous Turns and Moves")
+    class ContinuousTests {
+
+        @Test
+        @DisplayName("Four left turns — returns to original direction North")
+        void fourLeftTurnsFullRotation() {
+            solution.robotNavigate(1, Arrays.asList("L", "L", "L", "L"));
             assertEquals(RobotNavigationSolution.Direction.NORTH, robot.getDirection());
         }
 
         @Test
-        @DisplayName("Get non-existent robot returns null")
-        void testGetNonExistentRobot() {
-            RobotNavigationSolution.Robot robot = solution.getRobot("nonexistent");
-            assertNull(robot);
-        }
-
-        @Test
-        @DisplayName("Add multiple robots")
-        void testAddMultipleRobots() {
-            solution.addRobot("robot1", 
-                new RobotNavigationSolution.Position(0, 0), 
-                RobotNavigationSolution.Direction.NORTH);
-            solution.addRobot("robot2", 
-                new RobotNavigationSolution.Position(10, 10), 
-                RobotNavigationSolution.Direction.SOUTH);
-            solution.addRobot("robot3", 
-                new RobotNavigationSolution.Position(-5, 5), 
-                RobotNavigationSolution.Direction.WEST);
-            
-            assertNotNull(solution.getRobot("robot1"));
-            assertNotNull(solution.getRobot("robot2"));
-            assertNotNull(solution.getRobot("robot3"));
-            
-            assertEquals(RobotNavigationSolution.Direction.NORTH, 
-                solution.getRobot("robot1").getDirection());
-            assertEquals(RobotNavigationSolution.Direction.SOUTH, 
-                solution.getRobot("robot2").getDirection());
-            assertEquals(RobotNavigationSolution.Direction.WEST, 
-                solution.getRobot("robot3").getDirection());
-        }
-
-        @Test
-        @DisplayName("Remove robot")
-        void testRemoveRobot() {
-            solution.addRobot("robot1");
-            assertNotNull(solution.getRobot("robot1"));
-            
-            boolean removed = solution.removeRobot("robot1");
-            assertTrue(removed);
-            assertNull(solution.getRobot("robot1"));
-        }
-
-        @Test
-        @DisplayName("Remove non-existent robot returns false")
-        void testRemoveNonExistentRobot() {
-            boolean removed = solution.removeRobot("nonexistent");
-            assertFalse(removed);
-        }
-
-        @Test
-        @DisplayName("Reset robot to initial position")
-        void testResetRobot() {
-            solution.addRobot("robot1");
-            
-            // Navigate the robot
-            solution.robotNavigate("robot1", Arrays.asList("F5", "R", "F3"));
-            RobotNavigationSolution.Robot robot = solution.getRobot("robot1");
-            assertEquals(3, robot.getPosition().getX());
-            assertEquals(5, robot.getPosition().getY());
-            assertEquals(RobotNavigationSolution.Direction.EAST, robot.getDirection());
-            
-            // Reset the robot (resets to origin facing NORTH)
-            solution.resetRobot("robot1");
-            robot = solution.getRobot("robot1");
-            assertEquals(0, robot.getPosition().getX());
-            assertEquals(0, robot.getPosition().getY());
+        @DisplayName("Four right turns — returns to original direction North")
+        void fourRightTurnsFullRotation() {
+            solution.robotNavigate(1, Arrays.asList("R", "R", "R", "R"));
             assertEquals(RobotNavigationSolution.Direction.NORTH, robot.getDirection());
         }
 
         @Test
-        @DisplayName("Reset non-existent robot does not throw")
-        void testResetNonExistentRobot() {
-            assertDoesNotThrow(() -> solution.resetRobot("nonexistent"));
+        @DisplayName("Two left turns — faces South")
+        void twoLeftTurnsFacesSouth() {
+            solution.robotNavigate(1, Arrays.asList("L", "L"));
+            assertEquals(RobotNavigationSolution.Direction.SOUTH, robot.getDirection());
         }
 
         @Test
-        @DisplayName("Navigate specific robot by ID")
-        void testNavigateRobotById() {
-            solution.addRobot("robot1");
-            solution.addRobot("robot2", 
-                new RobotNavigationSolution.Position(5, 5), 
-                RobotNavigationSolution.Direction.EAST);
-            
-            // Navigate robot1
-            RobotNavigationSolution.Position pos1 = solution.robotNavigate(
-                "robot1", Arrays.asList("F3"));
-            assertEquals(0, pos1.getX());
-            assertEquals(3, pos1.getY());
-            
-            // Navigate robot2
-            RobotNavigationSolution.Position pos2 = solution.robotNavigate(
-                "robot2", Arrays.asList("F2"));
-            assertEquals(7, pos2.getX());
-            assertEquals(5, pos2.getY());
-            
-            // Verify both robots updated correctly
-            assertEquals(3, solution.getRobot("robot1").getPosition().getY());
-            assertEquals(7, solution.getRobot("robot2").getPosition().getX());
+        @DisplayName("Three right turns — faces West")
+        void threeRightTurnsFacesWest() {
+            solution.robotNavigate(1, Arrays.asList("R", "R", "R"));
+            assertEquals(RobotNavigationSolution.Direction.WEST, robot.getDirection());
         }
 
         @Test
-        @DisplayName("Navigate non-existent robot returns null")
-        void testNavigateNonExistentRobot() {
-            RobotNavigationSolution.Position pos = solution.robotNavigate(
-                "nonexistent", Arrays.asList("F5"));
-            assertNull(pos);
+        @DisplayName("Continuous forward moves accumulate — F2 + F3 = (0,5)")
+        void continuousForwardAccumulates() {
+            RobotNavigationSolution.Position result = solution.robotNavigate(1, 
+                    Arrays.asList("F2", "F3"));
+            assertEquals(new RobotNavigationSolution.Position(0, 5), result);
         }
 
         @Test
-        @DisplayName("Navigate robot with obstacles using setObstacles")
-        void testNavigateRobotByIdWithObstacles() {
-            solution.addRobot("robot1");
-            
-            solution.setObstacles(Set.of(
-                new RobotNavigationSolution.Position(0, 3)));
-            
-            RobotNavigationSolution.Position pos = solution.robotNavigate(
-                "robot1", Arrays.asList("F5"));
-            
-            // Robot stopped at (0, 2) due to obstacle at (0, 3)
-            assertEquals(0, pos.getX());
-            assertEquals(2, pos.getY());
+        @DisplayName("Continuous backward moves accumulate — B1 + B2 + B3 = (0,-6)")
+        void continuousBackwardAccumulates() {
+            RobotNavigationSolution.Position result = solution.robotNavigate(1, 
+                    Arrays.asList("B1", "B2", "B3"));
+            assertEquals(new RobotNavigationSolution.Position(0, -6), result);
         }
 
         @Test
-        @DisplayName("Overwrite existing robot with same ID")
-        void testOverwriteRobot() {
-            solution.addRobot("robot1");
-            assertEquals(0, solution.getRobot("robot1").getPosition().getX());
-            
-            // Add robot with same ID overwrites
-            solution.addRobot("robot1", 
-                new RobotNavigationSolution.Position(100, 200), 
-                RobotNavigationSolution.Direction.SOUTH);
-            assertEquals(100, solution.getRobot("robot1").getPosition().getX());
-            assertEquals(200, solution.getRobot("robot1").getPosition().getY());
-            assertEquals(RobotNavigationSolution.Direction.SOUTH, 
-                solution.getRobot("robot1").getDirection());
+        @DisplayName("Continuous same direction: R F1 F2 F3 — all East = (6,0)")
+        void continuousForwardAfterTurn() {
+            RobotNavigationSolution.Position result = solution.robotNavigate(1, 
+                    Arrays.asList("R", "F1", "F2", "F3"));
+            assertEquals(new RobotNavigationSolution.Position(6, 0), result);
+        }
+    }
+
+    // ──────────────────────────────────────────────────────
+    // 4. All command strings are invalid
+    // ──────────────────────────────────────────────────────
+    @Nested
+    @DisplayName("All Commands Invalid")
+    class AllInvalidTests {
+
+        @Test
+        @DisplayName("All unknown letters — robot stays at origin")
+        void allUnknownCommands() {
+            RobotNavigationSolution.Position result = solution.robotNavigate(1, 
+                    Arrays.asList("X", "Y", "Z"));
+            assertEquals(new RobotNavigationSolution.Position(0, 0), result);
         }
 
         @Test
-        @DisplayName("Multiple robots navigate independently")
-        void testMultipleRobotsNavigateIndependently() {
-            solution.addRobot("A");
-            solution.addRobot("B", 
-                new RobotNavigationSolution.Position(0, 0), 
-                RobotNavigationSolution.Direction.EAST);
-            
-            solution.robotNavigate("A", Arrays.asList("F5"));
-            solution.robotNavigate("B", Arrays.asList("F5"));
-            
-            // A moved north, B moved east
-            assertEquals(0, solution.getRobot("A").getPosition().getX());
-            assertEquals(5, solution.getRobot("A").getPosition().getY());
-            assertEquals(5, solution.getRobot("B").getPosition().getX());
-            assertEquals(0, solution.getRobot("B").getPosition().getY());
+        @DisplayName("All empty strings — robot stays at origin")
+        void allEmptyStrings() {
+            RobotNavigationSolution.Position result = solution.robotNavigate(1, 
+                    Arrays.asList("", "", ""));
+            assertEquals(new RobotNavigationSolution.Position(0, 0), result);
         }
 
         @Test
-        @DisplayName("Get all robot IDs")
-        void testGetRobotIds() {
-            solution.addRobot("robot1");
-            solution.addRobot("robot2");
-            solution.addRobot("robot3");
-            
-            java.util.Set<String> ids = solution.getRobotIds();
-            // Note: default robot is already added in setUp
-            assertTrue(ids.contains("robot1"));
-            assertTrue(ids.contains("robot2"));
-            assertTrue(ids.contains("robot3"));
+        @DisplayName("Direction unchanged after all invalid commands")
+        void directionUnchangedAfterInvalid() {
+            solution.robotNavigate(1, Arrays.asList("X", "Z", "Q"));
+            assertEquals(RobotNavigationSolution.Direction.NORTH, robot.getDirection());
+        }
+    }
+
+    // ──────────────────────────────────────────────────────
+    // 5. Mix of valid and invalid commands
+    // ──────────────────────────────────────────────────────
+    @Nested
+    @DisplayName("Mixed Valid and Invalid Commands")
+    class MixedValidInvalidTests {
+
+        @Test
+        @DisplayName("Invalid commands skipped, valid ones execute — F2 X R F1 = (1,2)")
+        void invalidSkippedValidExecuted() {
+            RobotNavigationSolution.Position result = solution.robotNavigate(1, 
+                    Arrays.asList("F2", "X", "R", "F1"));
+            // F2 → (0,2), X skipped, R → East, F1 → (1,2)
+            assertEquals(new RobotNavigationSolution.Position(1, 2), result);
         }
 
         @Test
-        @DisplayName("Get default robot")
-        void testGetDefaultRobot() {
-            // Default robot is created in constructor
-            RobotNavigationSolution.Robot robot = solution.getRobot();
-            assertNotNull(robot);
-            assertEquals(0, robot.getPosition().getX());
-            assertEquals(0, robot.getPosition().getY());
+        @DisplayName("Invalid at start and end — only middle commands run")
+        void invalidAtStartAndEnd() {
+            RobotNavigationSolution.Position result = solution.robotNavigate(1, 
+                    Arrays.asList("Z", "F3", "R", "F2", "Q"));
+            // Z skip, F3 → (0,3), R → East, F2 → (2,3), Q skip
+            assertEquals(new RobotNavigationSolution.Position(2, 3), result);
         }
 
         @Test
-        @DisplayName("Robot blocked by another robot")
-        void testRobotBlockedByAnotherRobot() {
-            // Robot A at origin facing north
-            solution.addRobot("A");
-            // Robot B at (0, 3) - directly in A's path
-            solution.addRobot("B", 
-                new RobotNavigationSolution.Position(0, 3), 
-                RobotNavigationSolution.Direction.NORTH);
-            
-            // A tries to move 5 steps north, but B is at (0, 3)
-            RobotNavigationSolution.Position pos = solution.robotNavigate(
-                "A", Arrays.asList("F5"));
-            
-            // A should stop at (0, 2), blocked by B at (0, 3)
-            assertEquals(0, pos.getX());
-            assertEquals(2, pos.getY());
-            
-            // B should still be at (0, 3)
-            assertEquals(0, solution.getRobot("B").getPosition().getX());
-            assertEquals(3, solution.getRobot("B").getPosition().getY());
+        @DisplayName("Empty strings interspersed — skipped gracefully")
+        void emptyStringsInterspersed() {
+            RobotNavigationSolution.Position result = solution.robotNavigate(1, 
+                    Arrays.asList("", "F1", "", "L", "F1", ""));
+            // F1 → (0,1), L → West, F1 → (-1,1)
+            assertEquals(new RobotNavigationSolution.Position(-1, 1), result);
+        }
+    }
+
+    // ──────────────────────────────────────────────────────
+    // 6. All command strings are valid
+    // ──────────────────────────────────────────────────────
+    @Nested
+    @DisplayName("All Commands Valid")
+    class AllValidTests {
+
+        @Test
+        @DisplayName("Zigzag path: F1 R F1 L F1 R F1 = (2,2)")
+        void zigzagPath() {
+            // N→(0,1), R→E, E→(1,1), L→N, N→(1,2), R→E, E→(2,2)
+            RobotNavigationSolution.Position result = solution.robotNavigate(1, 
+                    Arrays.asList("F1", "R", "F1", "L", "F1", "R", "F1"));
+            assertEquals(new RobotNavigationSolution.Position(2, 2), result);
         }
 
         @Test
-        @DisplayName("Robot can move after blocking robot moves away")
-        void testRobotCanMoveAfterBlockerMoves() {
-            // Robot A at origin facing north
-            solution.addRobot("A");
-            // Robot B at (0, 1) - blocking A
-            solution.addRobot("B", 
-                new RobotNavigationSolution.Position(0, 1), 
-                RobotNavigationSolution.Direction.EAST);
-            
-            // A tries to move forward - blocked by B at (0, 1)
-            solution.robotNavigate("A", Arrays.asList("F1"));
-            assertEquals(0, solution.getRobot("A").getPosition().getY()); // Still at origin
-            
-            // B moves east, out of A's way
-            solution.robotNavigate("B", Arrays.asList("F2"));
-            assertEquals(2, solution.getRobot("B").getPosition().getX());
-            assertEquals(1, solution.getRobot("B").getPosition().getY());
-            
-            // Now A can move forward
-            solution.robotNavigate("A", Arrays.asList("F3"));
-            assertEquals(0, solution.getRobot("A").getPosition().getX());
-            assertEquals(3, solution.getRobot("A").getPosition().getY());
+        @DisplayName("All four directions traversal")
+        void allFourDirections() {
+            // North F2 → (0,2), R → East F3 → (3,2), R → South F1 → (3,1), R → West F4 → (-1,1)
+            RobotNavigationSolution.Position result = solution.robotNavigate(1, 
+                    Arrays.asList("F2", "R", "F3", "R", "F1", "R", "F4"));
+            assertEquals(new RobotNavigationSolution.Position(-1, 1), result);
         }
 
         @Test
-        @DisplayName("Two robots cannot occupy same position")
-        void testTwoRobotsCannotOccupySamePosition() {
-            // Remove default robot to simplify test
-            solution.removeRobot("default");
-            
-            // Robot A at (2, 0) facing west
-            solution.addRobot("A", 
-                new RobotNavigationSolution.Position(2, 0), 
-                RobotNavigationSolution.Direction.WEST);
-            // Robot B at (-2, 0) facing east
-            solution.addRobot("B", 
-                new RobotNavigationSolution.Position(-2, 0), 
-                RobotNavigationSolution.Direction.EAST);
-            
-            // Both try to reach origin
-            solution.robotNavigate("A", Arrays.asList("F2")); // A reaches (0, 0)
-            solution.robotNavigate("B", Arrays.asList("F2")); // B blocked at (-1, 0)
-            
-            assertEquals(0, solution.getRobot("A").getPosition().getX());
-            assertEquals(0, solution.getRobot("A").getPosition().getY());
-            assertEquals(-1, solution.getRobot("B").getPosition().getX());
-            assertEquals(0, solution.getRobot("B").getPosition().getY());
+        @DisplayName("Only turns — position stays at origin")
+        void onlyTurns() {
+            RobotNavigationSolution.Position result = solution.robotNavigate(1, 
+                    Arrays.asList("L", "R", "L", "L", "R"));
+            assertEquals(new RobotNavigationSolution.Position(0, 0), result);
         }
 
         @Test
-        @DisplayName("Robot blocked by static obstacle and another robot")
-        void testRobotBlockedByBothObstacleAndRobot() {
-            // Static obstacle at (0, 5)
-            solution.setObstacles(Set.of(
-                new RobotNavigationSolution.Position(0, 5)));
-            
-            // Robot A at origin facing north
-            solution.addRobot("A");
-            // Robot B at (0, 3)
-            solution.addRobot("B", 
-                new RobotNavigationSolution.Position(0, 3), 
-                RobotNavigationSolution.Direction.NORTH);
-            
-            // A moves north - blocked by B at (0, 3)
-            solution.robotNavigate("A", Arrays.asList("F10"));
-            assertEquals(2, solution.getRobot("A").getPosition().getY());
-            
-            // B moves north - blocked by obstacle at (0, 5)
-            solution.robotNavigate("B", Arrays.asList("F10"));
-            assertEquals(4, solution.getRobot("B").getPosition().getY());
+        @DisplayName("Large steps — F100 then B50 = (0,50)")
+        void largeSteps() {
+            RobotNavigationSolution.Position result = solution.robotNavigate(1, 
+                    Arrays.asList("F100", "B50"));
+            assertEquals(new RobotNavigationSolution.Position(0, 50), result);
+        }
+    }
+
+    // ──────────────────────────────────────────────────────
+    // 7. Empty command list
+    // ──────────────────────────────────────────────────────
+    @Nested
+    @DisplayName("Empty Command List")
+    class EmptyCommandListTests {
+
+        @Test
+        @DisplayName("Empty list — robot stays at origin")
+        void emptyList() {
+            RobotNavigationSolution.Position result = solution.robotNavigate(1, Collections.emptyList());
+            assertEquals(new RobotNavigationSolution.Position(0, 0), result);
+        }
+
+        @Test
+        @DisplayName("Empty list — direction stays North")
+        void emptyListDirectionUnchanged() {
+            solution.robotNavigate(1, Collections.emptyList());
+            assertEquals(RobotNavigationSolution.Direction.NORTH, robot.getDirection());
+        }
+    }
+
+    // ──────────────────────────────────────────────────────
+    // 8. Obstacle tests
+    // ──────────────────────────────────────────────────────
+    @Nested
+    @DisplayName("Obstacle Tests")
+    class ObstacleTests {
+
+        @Test
+        @DisplayName("Robot blocked by obstacle directly ahead — stays at origin")
+        void blockedByObstacleAhead() {
+            Set<RobotNavigationSolution.Position> obstacles = new HashSet<>();
+            obstacles.add(new RobotNavigationSolution.Position(0, 1));
+            RobotNavigationSolution.Robot r = new RobotNavigationSolution.Robot(1);
+            RobotNavigationSolution sol = new RobotNavigationSolution(obstacles);
+            sol.addRobot(r);
+
+            RobotNavigationSolution.Position result = sol.robotNavigate(1, Arrays.asList("F"));
+            assertEquals(new RobotNavigationSolution.Position(0, 0), result);
+        }
+
+        @Test
+        @DisplayName("Robot blocked mid-movement — stops at last valid position")
+        void blockedMidMovement() {
+            // Obstacle at (0,3), robot tries F5 from origin facing North
+            Set<RobotNavigationSolution.Position> obstacles = new HashSet<>();
+            obstacles.add(new RobotNavigationSolution.Position(0, 3));
+            RobotNavigationSolution.Robot r = new RobotNavigationSolution.Robot(1);
+            RobotNavigationSolution sol = new RobotNavigationSolution(obstacles);
+            sol.addRobot(r);
+
+            RobotNavigationSolution.Position result = sol.robotNavigate(1, Arrays.asList("F5"));
+            // Moves to (0,1), (0,2), then blocked at (0,3) — stops at (0,2)
+            assertEquals(new RobotNavigationSolution.Position(0, 2), result);
+        }
+
+        @Test
+        @DisplayName("Backward blocked by obstacle — stays in place")
+        void backwardBlocked() {
+            Set<RobotNavigationSolution.Position> obstacles = new HashSet<>();
+            obstacles.add(new RobotNavigationSolution.Position(0, -1));
+            RobotNavigationSolution.Robot r = new RobotNavigationSolution.Robot(1);
+            RobotNavigationSolution sol = new RobotNavigationSolution(obstacles);
+            sol.addRobot(r);
+
+            RobotNavigationSolution.Position result = sol.robotNavigate(1, Arrays.asList("B"));
+            assertEquals(new RobotNavigationSolution.Position(0, 0), result);
+        }
+
+        @Test
+        @DisplayName("Turn avoids obstacle — can move in different direction")
+        void turnAvoidsObstacle() {
+            // Obstacle at (0,1) blocks North, but East is clear
+            Set<RobotNavigationSolution.Position> obstacles = new HashSet<>();
+            obstacles.add(new RobotNavigationSolution.Position(0, 1));
+            RobotNavigationSolution.Robot r = new RobotNavigationSolution.Robot(1);
+            RobotNavigationSolution sol = new RobotNavigationSolution(obstacles);
+            sol.addRobot(r);
+
+            RobotNavigationSolution.Position result = sol.robotNavigate(1, Arrays.asList("F", "R", "F2"));
+            // F blocked → stay (0,0), R → East, F2 → (2,0)
+            assertEquals(new RobotNavigationSolution.Position(2, 0), result);
+        }
+
+        @Test
+        @DisplayName("Multiple obstacles — blocked in multiple directions")
+        void multipleObstacles() {
+            Set<RobotNavigationSolution.Position> obstacles = new HashSet<>();
+            obstacles.add(new RobotNavigationSolution.Position(0, 1));  // blocks North
+            obstacles.add(new RobotNavigationSolution.Position(1, 0));  // blocks East
+            RobotNavigationSolution.Robot r = new RobotNavigationSolution.Robot(1);
+            RobotNavigationSolution sol = new RobotNavigationSolution(obstacles);
+            sol.addRobot(r);
+
+            RobotNavigationSolution.Position result = sol.robotNavigate(1, 
+                    Arrays.asList("F", "R", "F"));
+            // F blocked North, R → East, F blocked East → stays (0,0)
+            assertEquals(new RobotNavigationSolution.Position(0, 0), result);
+        }
+
+        @Test
+        @DisplayName("Robot starts on obstacle — no commands execute, returns start position")
+        void robotStartsOnObstacle() {
+            Set<RobotNavigationSolution.Position> obstacles = new HashSet<>();
+            obstacles.add(new RobotNavigationSolution.Position(0, 0));
+            RobotNavigationSolution.Robot r = new RobotNavigationSolution.Robot(1);
+            RobotNavigationSolution sol = new RobotNavigationSolution(obstacles);
+            sol.addRobot(r);
+
+            RobotNavigationSolution.Position result = sol.robotNavigate(1, Arrays.asList("F3", "R", "F2"));
+            assertEquals(new RobotNavigationSolution.Position(0, 0), result);
+        }
+
+        @Test
+        @DisplayName("No obstacles — full movement")
+        void noObstacles() {
+            Set<RobotNavigationSolution.Position> obstacles = new HashSet<>();
+            RobotNavigationSolution.Robot r = new RobotNavigationSolution.Robot(1);
+            RobotNavigationSolution sol = new RobotNavigationSolution(obstacles);
+            sol.addRobot(r);
+
+            RobotNavigationSolution.Position result = sol.robotNavigate(1, Arrays.asList("F2", "R", "F1"));
+            assertEquals(new RobotNavigationSolution.Position(1, 2), result);
+        }
+
+        @Test
+        @DisplayName("Obstacle behind only blocks backward, not forward")
+        void obstacleBehindDoesNotBlockForward() {
+            Set<RobotNavigationSolution.Position> obstacles = new HashSet<>();
+            obstacles.add(new RobotNavigationSolution.Position(0, -1)); // behind
+            RobotNavigationSolution.Robot r = new RobotNavigationSolution.Robot(1);
+            RobotNavigationSolution sol = new RobotNavigationSolution(obstacles);
+            sol.addRobot(r);
+
+            RobotNavigationSolution.Position result = sol.robotNavigate(1, Arrays.asList("F3"));
+            assertEquals(new RobotNavigationSolution.Position(0, 3), result);
+        }
+    }
+
+    // ──────────────────────────────────────────────────────
+    // 9. History tests
+    // ──────────────────────────────────────────────────────
+    @Nested
+    @DisplayName("History Tests")
+    class HistoryTests {
+
+        @Test
+        @DisplayName("Initial history contains starting position")
+        void initialHistory() {
+            List<RobotNavigationSolution.Position> history = robot.getHistory();
+            assertEquals(1, history.size());
+            assertEquals(new RobotNavigationSolution.Position(0, 0), history.get(0));
+        }
+
+        @Test
+        @DisplayName("History records each step of movement")
+        void historyRecordsEachStep() {
+            solution.robotNavigate(1, Arrays.asList("F3"));
+            List<RobotNavigationSolution.Position> history = robot.getHistory();
+            assertEquals(4, history.size()); // origin + 3 steps
+            assertEquals(new RobotNavigationSolution.Position(0, 0), history.get(0));
+            assertEquals(new RobotNavigationSolution.Position(0, 1), history.get(1));
+            assertEquals(new RobotNavigationSolution.Position(0, 2), history.get(2));
+            assertEquals(new RobotNavigationSolution.Position(0, 3), history.get(3));
+        }
+
+        @Test
+        @DisplayName("History records movement with turns")
+        void historyWithTurns() {
+            solution.robotNavigate(1, Arrays.asList("F1", "R", "F1"));
+            List<RobotNavigationSolution.Position> history = robot.getHistory();
+            assertEquals(3, history.size()); // origin + F1 + F1 (turns don't add)
+            assertEquals(new RobotNavigationSolution.Position(0, 0), history.get(0));
+            assertEquals(new RobotNavigationSolution.Position(0, 1), history.get(1));
+            assertEquals(new RobotNavigationSolution.Position(1, 1), history.get(2));
+        }
+
+        @Test
+        @DisplayName("History does not record blocked movement")
+        void historyNotRecordedWhenBlocked() {
+            Set<RobotNavigationSolution.Position> obstacles = new HashSet<>();
+            obstacles.add(new RobotNavigationSolution.Position(0, 1));
+            RobotNavigationSolution.Robot r = new RobotNavigationSolution.Robot(1);
+            RobotNavigationSolution sol = new RobotNavigationSolution(obstacles);
+            sol.addRobot(r);
+
+            sol.robotNavigate(1, Arrays.asList("F"));
+            List<RobotNavigationSolution.Position> history = r.getHistory();
+            assertEquals(1, history.size()); // only origin
+        }
+
+        @Test
+        @DisplayName("History records partial movement before blocked")
+        void historyRecordsPartialBeforeBlocked() {
+            Set<RobotNavigationSolution.Position> obstacles = new HashSet<>();
+            obstacles.add(new RobotNavigationSolution.Position(0, 3));
+            RobotNavigationSolution.Robot r = new RobotNavigationSolution.Robot(1);
+            RobotNavigationSolution sol = new RobotNavigationSolution(obstacles);
+            sol.addRobot(r);
+
+            sol.robotNavigate(1, Arrays.asList("F5"));
+            List<RobotNavigationSolution.Position> history = r.getHistory();
+            assertEquals(3, history.size()); // origin + (0,1) + (0,2), blocked at (0,3)
+            assertEquals(new RobotNavigationSolution.Position(0, 0), history.get(0));
+            assertEquals(new RobotNavigationSolution.Position(0, 1), history.get(1));
+            assertEquals(new RobotNavigationSolution.Position(0, 2), history.get(2));
+        }
+
+        @Test
+        @DisplayName("History is unmodifiable")
+        void historyIsUnmodifiable() {
+            assertThrows(UnsupportedOperationException.class, () -> robot.getHistory().add(
+                    new RobotNavigationSolution.Position(99, 99)));
+        }
+    }
+
+    // ──────────────────────────────────────────────────────
+    // 10. Movement tests with non-interfering obstacles
+    //     (copied from no-obstacle tests, obstacles placed
+    //      away from the path so results are identical)
+    // ──────────────────────────────────────────────────────
+    @Nested
+    @DisplayName("Movement With Non-Interfering Obstacles")
+    class MovementWithObstaclesTests {
+
+        private Set<RobotNavigationSolution.Position> farObstacles() {
+            Set<RobotNavigationSolution.Position> obs = new HashSet<>();
+            obs.add(new RobotNavigationSolution.Position(100, 100));
+            obs.add(new RobotNavigationSolution.Position(-50, -50));
+            obs.add(new RobotNavigationSolution.Position(99, -99));
+            return obs;
+        }
+
+        @Test
+        @DisplayName("Forward 1 step with distant obstacles — (0,1)")
+        void moveForwardOneStep() {
+            RobotNavigationSolution.Robot r = new RobotNavigationSolution.Robot(1);
+            RobotNavigationSolution sol = new RobotNavigationSolution(farObstacles());
+            sol.addRobot(r);
+            RobotNavigationSolution.Position result = sol.robotNavigate(1, Arrays.asList("F"));
+            assertEquals(new RobotNavigationSolution.Position(0, 1), result);
+        }
+
+        @Test
+        @DisplayName("Forward 3 steps with distant obstacles — (0,3)")
+        void moveForwardMultipleSteps() {
+            RobotNavigationSolution.Robot r = new RobotNavigationSolution.Robot(1);
+            RobotNavigationSolution sol = new RobotNavigationSolution(farObstacles());
+            sol.addRobot(r);
+            RobotNavigationSolution.Position result = sol.robotNavigate(1, Arrays.asList("F3"));
+            assertEquals(new RobotNavigationSolution.Position(0, 3), result);
+        }
+
+        @Test
+        @DisplayName("Backward 2 steps with distant obstacles — (0,-2)")
+        void moveBackward() {
+            RobotNavigationSolution.Robot r = new RobotNavigationSolution.Robot(1);
+            RobotNavigationSolution sol = new RobotNavigationSolution(farObstacles());
+            sol.addRobot(r);
+            RobotNavigationSolution.Position result = sol.robotNavigate(1, Arrays.asList("B2"));
+            assertEquals(new RobotNavigationSolution.Position(0, -2), result);
+        }
+
+        @Test
+        @DisplayName("Turn left then forward with obstacles — (-1,0)")
+        void turnLeftThenForward() {
+            RobotNavigationSolution.Robot r = new RobotNavigationSolution.Robot(1);
+            RobotNavigationSolution sol = new RobotNavigationSolution(farObstacles());
+            sol.addRobot(r);
+            RobotNavigationSolution.Position result = sol.robotNavigate(1, Arrays.asList("L", "F"));
+            assertEquals(new RobotNavigationSolution.Position(-1, 0), result);
+        }
+
+        @Test
+        @DisplayName("Turn right then forward with obstacles — (1,0)")
+        void turnRightThenForward() {
+            RobotNavigationSolution.Robot r = new RobotNavigationSolution.Robot(1);
+            RobotNavigationSolution sol = new RobotNavigationSolution(farObstacles());
+            sol.addRobot(r);
+            RobotNavigationSolution.Position result = sol.robotNavigate(1, Arrays.asList("R", "F"));
+            assertEquals(new RobotNavigationSolution.Position(1, 0), result);
+        }
+
+        @Test
+        @DisplayName("R F2 R F3 with obstacles — (2,-3)")
+        void rightForwardRightForward() {
+            RobotNavigationSolution.Robot r = new RobotNavigationSolution.Robot(1);
+            RobotNavigationSolution sol = new RobotNavigationSolution(farObstacles());
+            sol.addRobot(r);
+            RobotNavigationSolution.Position result = sol.robotNavigate(1, 
+                    Arrays.asList("R", "F2", "R", "F3"));
+            assertEquals(new RobotNavigationSolution.Position(2, -3), result);
+        }
+
+        @Test
+        @DisplayName("Square walk with obstacles — returns to origin")
+        void squareWalkReturnsToOrigin() {
+            RobotNavigationSolution.Robot r = new RobotNavigationSolution.Robot(1);
+            RobotNavigationSolution sol = new RobotNavigationSolution(farObstacles());
+            sol.addRobot(r);
+            RobotNavigationSolution.Position result = sol.robotNavigate(1, 
+                    Arrays.asList("F", "R", "F", "R", "F", "R", "F"));
+            assertEquals(new RobotNavigationSolution.Position(0, 0), result);
+        }
+
+        @Test
+        @DisplayName("Forward then backward cancels with obstacles — origin")
+        void forwardThenBackwardCancels() {
+            RobotNavigationSolution.Robot r = new RobotNavigationSolution.Robot(1);
+            RobotNavigationSolution sol = new RobotNavigationSolution(farObstacles());
+            sol.addRobot(r);
+            RobotNavigationSolution.Position result = sol.robotNavigate(1, 
+                    Arrays.asList("F5", "B5"));
+            assertEquals(new RobotNavigationSolution.Position(0, 0), result);
+        }
+
+        @Test
+        @DisplayName("Problem example with obstacles — (1,4)")
+        void problemExample() {
+            RobotNavigationSolution.Robot r = new RobotNavigationSolution.Robot(1);
+            RobotNavigationSolution sol = new RobotNavigationSolution(farObstacles());
+            sol.addRobot(r);
+            RobotNavigationSolution.Position result = sol.robotNavigate(1, 
+                    Arrays.asList("F2", "R", "F1", "L", "F2"));
+            assertEquals(new RobotNavigationSolution.Position(1, 4), result);
+        }
+
+        @Test
+        @DisplayName("Zigzag path with obstacles — (2,2)")
+        void zigzagPath() {
+            RobotNavigationSolution.Robot r = new RobotNavigationSolution.Robot(1);
+            RobotNavigationSolution sol = new RobotNavigationSolution(farObstacles());
+            sol.addRobot(r);
+            RobotNavigationSolution.Position result = sol.robotNavigate(1, 
+                    Arrays.asList("F1", "R", "F1", "L", "F1", "R", "F1"));
+            assertEquals(new RobotNavigationSolution.Position(2, 2), result);
+        }
+
+        @Test
+        @DisplayName("Continuous forward with obstacles — F2 + F3 = (0,5)")
+        void continuousForwardAccumulates() {
+            RobotNavigationSolution.Robot r = new RobotNavigationSolution.Robot(1);
+            RobotNavigationSolution sol = new RobotNavigationSolution(farObstacles());
+            sol.addRobot(r);
+            RobotNavigationSolution.Position result = sol.robotNavigate(1, 
+                    Arrays.asList("F2", "F3"));
+            assertEquals(new RobotNavigationSolution.Position(0, 5), result);
+        }
+
+        @Test
+        @DisplayName("Continuous backward with obstacles — B1+B2+B3 = (0,-6)")
+        void continuousBackwardAccumulates() {
+            RobotNavigationSolution.Robot r = new RobotNavigationSolution.Robot(1);
+            RobotNavigationSolution sol = new RobotNavigationSolution(farObstacles());
+            sol.addRobot(r);
+            RobotNavigationSolution.Position result = sol.robotNavigate(1, 
+                    Arrays.asList("B1", "B2", "B3"));
+            assertEquals(new RobotNavigationSolution.Position(0, -6), result);
+        }
+
+        @Test
+        @DisplayName("Robot starts on obstacle — no commands execute")
+        void robotStartsOnObstacleWithCommands() {
+            Set<RobotNavigationSolution.Position> obstacles = new HashSet<>();
+            obstacles.add(new RobotNavigationSolution.Position(0, 0));
+            RobotNavigationSolution.Robot r = new RobotNavigationSolution.Robot(1);
+            RobotNavigationSolution sol = new RobotNavigationSolution(obstacles);
+            sol.addRobot(r);
+
+            RobotNavigationSolution.Position result = sol.robotNavigate(1, 
+                    Arrays.asList("F2", "R", "F1", "L", "F2"));
+            assertEquals(new RobotNavigationSolution.Position(0, 0), result);
+            // Direction should also remain unchanged since no commands ran
+            assertEquals(RobotNavigationSolution.Direction.NORTH, r.getDirection());
+        }
+    }
+
+    // ──────────────────────────────────────────────────────
+    // 11. Multi-robot blocking tests
+    // ──────────────────────────────────────────────────────
+    @Nested
+    @DisplayName("Multi-Robot Blocking Tests")
+    class MultiRobotBlockingTests {
+
+        @Test
+        @DisplayName("Robot blocked by another robot directly ahead")
+        void blockedByAnotherRobot() {
+            RobotNavigationSolution sol = new RobotNavigationSolution();
+            RobotNavigationSolution.Robot r1 = new RobotNavigationSolution.Robot(1); // (0,0) North
+            RobotNavigationSolution.Robot r2 = new RobotNavigationSolution.Robot(2,
+                    new RobotNavigationSolution.Position(0, 1), RobotNavigationSolution.Direction.NORTH);
+            sol.addRobot(r1);
+            sol.addRobot(r2);
+
+            // r1 tries to move forward but r2 is at (0,1)
+            RobotNavigationSolution.Position result = sol.robotNavigate(1, Arrays.asList("F"));
+            assertEquals(new RobotNavigationSolution.Position(0, 0), result);
+        }
+
+        @Test
+        @DisplayName("Robot blocked mid-movement by another robot")
+        void blockedMidMovementByAnotherRobot() {
+            RobotNavigationSolution sol = new RobotNavigationSolution();
+            RobotNavigationSolution.Robot r1 = new RobotNavigationSolution.Robot(1); // (0,0) North
+            RobotNavigationSolution.Robot r2 = new RobotNavigationSolution.Robot(2,
+                    new RobotNavigationSolution.Position(0, 3), RobotNavigationSolution.Direction.EAST);
+            sol.addRobot(r1);
+            sol.addRobot(r2);
+
+            // r1 tries F5, blocked at (0,3) by r2, stops at (0,2)
+            RobotNavigationSolution.Position result = sol.robotNavigate(1, Arrays.asList("F5"));
+            assertEquals(new RobotNavigationSolution.Position(0, 2), result);
+        }
+
+        @Test
+        @DisplayName("Robot can move when other robot is not in the way")
+        void notBlockedByDistantRobot() {
+            RobotNavigationSolution sol = new RobotNavigationSolution();
+            RobotNavigationSolution.Robot r1 = new RobotNavigationSolution.Robot(1); // (0,0) North
+            RobotNavigationSolution.Robot r2 = new RobotNavigationSolution.Robot(2,
+                    new RobotNavigationSolution.Position(5, 5), RobotNavigationSolution.Direction.NORTH);
+            sol.addRobot(r1);
+            sol.addRobot(r2);
+
+            RobotNavigationSolution.Position result = sol.robotNavigate(1, Arrays.asList("F3"));
+            assertEquals(new RobotNavigationSolution.Position(0, 3), result);
+        }
+
+        @Test
+        @DisplayName("Two robots move sequentially without blocking each other")
+        void twoRobotsMoveSeparately() {
+            RobotNavigationSolution sol = new RobotNavigationSolution();
+            RobotNavigationSolution.Robot r1 = new RobotNavigationSolution.Robot(1); // (0,0) North
+            RobotNavigationSolution.Robot r2 = new RobotNavigationSolution.Robot(2,
+                    new RobotNavigationSolution.Position(3, 0), RobotNavigationSolution.Direction.NORTH);
+            sol.addRobot(r1);
+            sol.addRobot(r2);
+
+            // r1 goes East, r2 goes North — no collision
+            sol.robotNavigate(1, Arrays.asList("R", "F2")); // r1 → (2,0)
+            sol.robotNavigate(2, Arrays.asList("F2"));       // r2 → (3,2)
+
+            assertEquals(new RobotNavigationSolution.Position(2, 0), r1.getPosition());
+            assertEquals(new RobotNavigationSolution.Position(3, 2), r2.getPosition());
+        }
+
+        @Test
+        @DisplayName("Robot blocked by another robot AND static obstacle")
+        void blockedByRobotAndObstacle() {
+            Set<RobotNavigationSolution.Position> obstacles = new HashSet<>();
+            obstacles.add(new RobotNavigationSolution.Position(1, 0)); // static obstacle East
+            RobotNavigationSolution sol = new RobotNavigationSolution(obstacles);
+            RobotNavigationSolution.Robot r1 = new RobotNavigationSolution.Robot(1); // (0,0)
+            RobotNavigationSolution.Robot r2 = new RobotNavigationSolution.Robot(2,
+                    new RobotNavigationSolution.Position(0, 1), RobotNavigationSolution.Direction.NORTH);
+            sol.addRobot(r1);
+            sol.addRobot(r2);
+
+            // r1 blocked North by r2, blocked East by obstacle
+            sol.robotNavigate(1, Arrays.asList("F")); // blocked by r2
+            assertEquals(new RobotNavigationSolution.Position(0, 0), r1.getPosition());
+            sol.robotNavigate(1, Arrays.asList("R", "F")); // blocked by obstacle
+            assertEquals(new RobotNavigationSolution.Position(0, 0), r1.getPosition());
+        }
+
+        @Test
+        @DisplayName("Robot can turn even when surrounded by other robots")
+        void canTurnWhenSurrounded() {
+            RobotNavigationSolution sol = new RobotNavigationSolution();
+            RobotNavigationSolution.Robot r1 = new RobotNavigationSolution.Robot(1); // (0,0)
+            RobotNavigationSolution.Robot rN = new RobotNavigationSolution.Robot(2,
+                    new RobotNavigationSolution.Position(0, 1), RobotNavigationSolution.Direction.NORTH);
+            RobotNavigationSolution.Robot rE = new RobotNavigationSolution.Robot(3,
+                    new RobotNavigationSolution.Position(1, 0), RobotNavigationSolution.Direction.NORTH);
+            RobotNavigationSolution.Robot rS = new RobotNavigationSolution.Robot(4,
+                    new RobotNavigationSolution.Position(0, -1), RobotNavigationSolution.Direction.NORTH);
+            RobotNavigationSolution.Robot rW = new RobotNavigationSolution.Robot(5,
+                    new RobotNavigationSolution.Position(-1, 0), RobotNavigationSolution.Direction.NORTH);
+            sol.addRobot(r1);
+            sol.addRobot(rN);
+            sol.addRobot(rE);
+            sol.addRobot(rS);
+            sol.addRobot(rW);
+
+            // r1 can turn but cannot move in any direction
+            sol.robotNavigate(1, Arrays.asList("R", "R")); // turn to South
+            assertEquals(RobotNavigationSolution.Direction.SOUTH, r1.getDirection());
+            assertEquals(new RobotNavigationSolution.Position(0, 0), r1.getPosition());
+        }
+
+        @Test
+        @DisplayName("After one robot moves away, another can move into vacated spot")
+        void moveIntoVacatedSpot() {
+            RobotNavigationSolution sol = new RobotNavigationSolution();
+            RobotNavigationSolution.Robot r1 = new RobotNavigationSolution.Robot(1); // (0,0)
+            RobotNavigationSolution.Robot r2 = new RobotNavigationSolution.Robot(2,
+                    new RobotNavigationSolution.Position(0, 1), RobotNavigationSolution.Direction.NORTH);
+            sol.addRobot(r1);
+            sol.addRobot(r2);
+
+            // r1 blocked by r2 at (0,1)
+            sol.robotNavigate(1, Arrays.asList("F"));
+            assertEquals(new RobotNavigationSolution.Position(0, 0), r1.getPosition());
+
+            // r2 moves away to (0,2)
+            sol.robotNavigate(2, Arrays.asList("F"));
+            assertEquals(new RobotNavigationSolution.Position(0, 2), r2.getPosition());
+
+            // Now r1 can move forward — (0,1) is free
+            sol.robotNavigate(1, Arrays.asList("F"));
+            assertEquals(new RobotNavigationSolution.Position(0, 1), r1.getPosition());
+        }
+
+        @Test
+        @DisplayName("Three robots in a line — middle blocks both ends")
+        void threeRobotsInLine() {
+            RobotNavigationSolution sol = new RobotNavigationSolution();
+            RobotNavigationSolution.Robot r1 = new RobotNavigationSolution.Robot(1,
+                    new RobotNavigationSolution.Position(0, 0), RobotNavigationSolution.Direction.NORTH);
+            RobotNavigationSolution.Robot r2 = new RobotNavigationSolution.Robot(2,
+                    new RobotNavigationSolution.Position(0, 1), RobotNavigationSolution.Direction.SOUTH);
+            RobotNavigationSolution.Robot r3 = new RobotNavigationSolution.Robot(3,
+                    new RobotNavigationSolution.Position(0, 2), RobotNavigationSolution.Direction.SOUTH);
+            sol.addRobot(r1);
+            sol.addRobot(r2);
+            sol.addRobot(r3);
+
+            // r1 tries North — blocked by r2 at (0,1)
+            sol.robotNavigate(1, Arrays.asList("F"));
+            assertEquals(new RobotNavigationSolution.Position(0, 0), r1.getPosition());
+
+            // r3 tries South — blocked by r2 at (0,1)
+            sol.robotNavigate(3, Arrays.asList("F"));
+            assertEquals(new RobotNavigationSolution.Position(0, 2), r3.getPosition());
         }
     }
 }
