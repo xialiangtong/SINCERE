@@ -4,211 +4,198 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.Set;
 
-/**
- * Compare4 - A 4-letter Wordle-style guessing game.
- *
- * A dictionary (set of 4-letter words) is provided. A target word is chosen
- * from that dictionary. The player guesses words and receives feedback:
- *   1  = exact match (correct letter, correct position)
- *   0  = misplaced   (letter exists in word but in a different position)
- *  -1  = absent      (letter does not exist or has already been accounted for)
- *
- * The goal is to find the target word in as few guesses as possible.
- *
- * Duplicate-letter rule:
- *   - Mark exact matches first.
- *   - Track remaining letter counts from the target word.
- *   - For each remaining position in the guess, credit as misplaced (0) only
- *     if that letter still has remaining count; otherwise mark absent (-1).
- */
 public class Compare4Solution {
 
-    public static final int WORD_LENGTH = 4;
-
-    public static final int EXACT_MATCH = 1;
+    public static final int EXACT = 1;
     public static final int MISPLACED = 0;
     public static final int ABSENT = -1;
+    public static final int MAX_GUESSES = 8;
+    public static final int WORD_LENGTH = 4;
 
     private final Set<String> dictionary;
-    private String targetWord;
-    private int attempts;
+    private final String target;
+    private int guessTimes;
     private boolean solved;
-    private final List<GuessResult> history;
 
-    /**
-     * A record of a single guess attempt and its feedback.
-     */
-    public static class GuessResult {
-        private final String guess;
-        private final int[] feedback;
+    // ======================== Constructor ========================
 
-        public GuessResult(String guess, int[] feedback) {
-            this.guess = guess;
-            this.feedback = Arrays.copyOf(feedback, feedback.length);
-        }
-
-        public String getGuess() { return guess; }
-        public int[] getFeedback() { return Arrays.copyOf(feedback, feedback.length); }
-
-        public boolean isSolved() {
-            for (int f : feedback) {
-                if (f != EXACT_MATCH) return false;
-            }
-            return true;
-        }
-    }
-
-    /**
-     * Create a game with a dictionary and a target word.
-     *
-     * @param dictionary set of valid 4-letter words
-     * @param targetWord the word the player must guess (must be in the dictionary)
-     * @throws IllegalArgumentException if dictionary is null/empty, targetWord is invalid,
-     *                                  or targetWord is not in the dictionary
-     */
-    public Compare4Solution(Set<String> dictionary, String targetWord) {
+    public Compare4Solution(Set<String> dictionary, String target) {
         if (dictionary == null || dictionary.isEmpty()) {
-            throw new IllegalArgumentException("dictionary must not be null or empty");
+            throw new IllegalArgumentException("Dictionary cannot be null or empty");
         }
-        validateWord(targetWord, "targetWord");
-
         // Normalize dictionary to uppercase
-        this.dictionary = new HashSet<>();
+        Set<String> upperDic = new HashSet<>();
         for (String word : dictionary) {
-            if (word != null && word.length() == WORD_LENGTH) {
-                this.dictionary.add(word.toUpperCase());
-            }
+            upperDic.add(word.toUpperCase());
         }
-
-        String targetUpper = targetWord.toUpperCase();
-        if (!this.dictionary.contains(targetUpper)) {
-            throw new IllegalArgumentException("targetWord must be in the dictionary");
+        String normalizedTarget = target == null ? null : target.toUpperCase();
+        if (normalizedTarget == null || normalizedTarget.length() != WORD_LENGTH || !upperDic.contains(normalizedTarget)) {
+            throw new IllegalArgumentException("Target must be a " + WORD_LENGTH + "-letter word in the dictionary");
         }
-
-        this.targetWord = targetUpper;
-        this.attempts = 0;
+        this.dictionary = upperDic;
+        this.target = normalizedTarget;
+        this.guessTimes = 0;
         this.solved = false;
-        this.history = new ArrayList<>();
     }
 
-    /**
-     * Create a standalone instance for direct compare calls (no game state).
-     */
-    public Compare4Solution() {
-        this.dictionary = null;
-        this.targetWord = null;
-        this.attempts = 0;
-        this.solved = false;
-        this.history = new ArrayList<>();
-    }
+    // ======================== Public Methods ========================
 
-    /**
-     * Make a guess against the target word. The guess must be a valid word from the dictionary.
-     *
-     * @param guess the guessed word
-     * @return GuessResult containing the guess and its feedback
-     * @throws IllegalStateException if the game is already solved
-     * @throws IllegalArgumentException if guess is invalid or not in the dictionary
-     */
-    public GuessResult guess(String guess) {
-        if (targetWord == null) {
-            throw new IllegalStateException("No target word set. Use the constructor with dictionary and target.");
+    public CompareResult guess(String input) {
+        if (isGameOver()) {
+            throw new IllegalStateException("Game is over");
         }
-        if (solved) {
-            throw new IllegalStateException("Game is already solved in " + attempts + " attempt(s)");
+        if (input == null || input.length() != WORD_LENGTH) {
+            throw new IllegalArgumentException("Guess must be exactly " + WORD_LENGTH + " letters");
         }
-        validateWord(guess, "guess");
-
-        String guessUpper = guess.toUpperCase();
-        if (!dictionary.contains(guessUpper)) {
-            throw new IllegalArgumentException("guess must be a word in the dictionary");
+        String normalized = input.toUpperCase();
+        if (!dictionary.contains(normalized)) {
+            throw new IllegalArgumentException("Guess must be a word in the dictionary");
         }
 
-        int[] feedback = compare(targetWord, guessUpper);
-        attempts++;
+        guessTimes++;
 
-        GuessResult result = new GuessResult(guessUpper, feedback);
-        history.add(result);
+        int[] result = compare(normalized);
 
-        if (result.isSolved()) {
+        CompareResult compareResult = new CompareResult(normalized, result);
+        if (compareResult.isCorrect()) {
             solved = true;
         }
-
-        return result;
+        return compareResult;
     }
 
-    /**
-     * Compare a 4-letter guess against a 4-letter given word (stateless utility).
-     *
-     * @param given the target word (must be exactly 4 characters)
-     * @param guess the guessed word (must be exactly 4 characters)
-     * @return int array of length 4 with values 1, 0, or -1
-     * @throws IllegalArgumentException if either argument is null or not exactly 4 characters
-     */
-    public int[] compare(String given, String guess) {
-        validateWord(given, "given");
-        validateWord(guess, "guess");
-
-        String givenUpper = given.toUpperCase();
-        String guessUpper = guess.toUpperCase();
-
-        int[] result = new int[WORD_LENGTH];
-
-        // Remaining letter counts from the given word (excludes exact-match positions)
-        Map<Character, Integer> remainingCounts = new HashMap<>();
-
-        // --- Pass 1: mark exact matches ---
-        for (int i = 0; i < WORD_LENGTH; i++) {
-            if (guessUpper.charAt(i) == givenUpper.charAt(i)) {
-                result[i] = EXACT_MATCH;
-            } else {
-                result[i] = ABSENT; // tentatively absent; may upgrade in pass 2
-                // Count this given-word letter as available for misplaced matching
-                remainingCounts.merge(givenUpper.charAt(i), 1, Integer::sum);
-            }
-        }
-
-        // --- Pass 2: mark misplaced letters ---
-        for (int i = 0; i < WORD_LENGTH; i++) {
-            if (result[i] != EXACT_MATCH) {
-                char c = guessUpper.charAt(i);
-                int count = remainingCounts.getOrDefault(c, 0);
-                if (count > 0) {
-                    result[i] = MISPLACED;
-                    remainingCounts.put(c, count - 1);
-                }
-                // else stays ABSENT
-            }
-        }
-
-        return result;
+    public int getGuessTimes() {
+        return guessTimes;
     }
 
-    public Set<String> getDictionary() {
-        return dictionary == null ? null : new HashSet<>(dictionary);
-    }
-
-    public int getAttempts() {
-        return attempts;
+    public boolean isGameOver() {
+        return solved || guessTimes >= MAX_GUESSES;
     }
 
     public boolean isSolved() {
         return solved;
     }
 
-    public List<GuessResult> getHistory() {
-        return new ArrayList<>(history);
+    // ======================== Private Helpers ========================
+
+    private int[] compare(String guess) {
+        int[] result = new int[WORD_LENGTH];
+        Arrays.fill(result, ABSENT);
+        Map<Character, Integer> remaining = new HashMap<>();
+
+        // 1st loop: mark exact matches, collect unmatched target letters
+        for (int i = 0; i < WORD_LENGTH; i++) {
+            if (guess.charAt(i) == target.charAt(i)) {
+                result[i] = EXACT;
+            } else {
+                remaining.merge(target.charAt(i), 1, Integer::sum);
+            }
+        }
+
+        // 2nd loop: mark misplaced or absent for non-exact positions
+        for (int i = 0; i < WORD_LENGTH; i++) {
+            if (result[i] == EXACT) continue;
+            char c = guess.charAt(i);
+            int count = remaining.getOrDefault(c, 0);
+            if (count > 0) {
+                result[i] = MISPLACED;
+                remaining.put(c, count - 1);
+            } else {
+                result[i] = ABSENT;
+            }
+        }
+
+        return result;
     }
 
-    private void validateWord(String word, String paramName) {
-        if (word == null) {
-            throw new IllegalArgumentException(paramName + " must not be null");
+    // ======================== Inner Class: CompareResult ========================
+
+    public static class CompareResult {
+        private final String guess;
+        private final int[] result;
+
+        public CompareResult(String guess, int[] result) {
+            this.guess = guess;
+            this.result = Arrays.copyOf(result, result.length);
         }
-        if (word.length() != WORD_LENGTH) {
-            throw new IllegalArgumentException(
-                    paramName + " must be exactly " + WORD_LENGTH + " characters, got " + word.length());
+
+        public String getGuess() {
+            return guess;
         }
+
+        public int[] getResult() {
+            return Arrays.copyOf(result, result.length);
+        }
+
+        public boolean isCorrect() {
+            for (int r : result) {
+                if (r != EXACT) return false;
+            }
+            return true;
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder sb = new StringBuilder();
+            sb.append(guess).append(" → [");
+            for (int i = 0; i < result.length; i++) {
+                if (i > 0) sb.append(", ");
+                switch (result[i]) {
+                    case EXACT -> sb.append("✓");
+                    case MISPLACED -> sb.append("?");
+                    case ABSENT -> sb.append("✗");
+                    default -> sb.append(result[i]);
+                }
+            }
+            sb.append("]");
+            return sb.toString();
+        }
+    }
+
+    // ======================== Main ========================
+
+    public static void main(String[] args) {
+        Set<String> dic = new HashSet<>(Arrays.asList(
+                "AABC", "ABCD", "ADAA", "BARK", "BIKE", "BOOK",
+                "CARD", "CODE", "DEMO", "JAVA", "WORD", "TEST"
+        ));
+
+        List<String> dicList = new ArrayList<>(dic);
+        String target = dicList.get((int) (Math.random() * dicList.size()));
+
+        Compare4Solution game = new Compare4Solution(dic, target);
+        Scanner scanner = new Scanner(System.in);
+
+        System.out.println("Welcome to Compare4! Guess the 4-letter word.");
+        System.out.println("You have " + MAX_GUESSES + " attempts. Type 'quit' to exit.");
+
+        while (!game.isGameOver()) {
+            System.out.print("Guess #" + (game.getGuessTimes() + 1) + ": ");
+            String input = scanner.nextLine().trim();
+
+            if (input.equalsIgnoreCase("quit") || input.equalsIgnoreCase("exit")) {
+                System.out.println("You quit. The word was: " + target);
+                break;
+            }
+
+            try {
+                CompareResult result = game.guess(input);
+                System.out.println(result);
+
+                if (game.isSolved()) {
+                    System.out.println("Congratulations! You solved it in " + game.getGuessTimes() + " guesses.");
+                }
+            } catch (IllegalArgumentException e) {
+                System.out.println("Invalid input: " + e.getMessage());
+            }
+        }
+
+        if (!game.isSolved()) {
+            System.out.println("Game over! The word was: " + target);
+        }
+
+        scanner.close();
     }
 }

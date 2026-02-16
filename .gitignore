@@ -1,0 +1,15 @@
+# Ignore everything
+*
+
+# Allow directories (so git can recurse into them)
+!*/
+
+# Allow only .java and .md files
+!*.java
+!*.md
+
+# Allow pom.xml for build config
+!pom.xml
+
+# Allow .gitignore itself
+!.gitignore
