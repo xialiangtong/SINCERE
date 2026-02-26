@@ -276,4 +276,118 @@ public class RateLimiterSolution {
             }
         }
     }
+
+    // ==================== Sliding Window Strategy ====================
+
+    /**
+     * Sliding Window Counter rate limiting strategy.
+     *
+     * Smooths the boundary problem of fixed windows by using a weighted count
+     * from the previous window. The effective count is:
+     *
+     *   effectiveCount = previousWindowCount * overlapRatio + currentWindowCount
+     *
+     * where overlapRatio = (windowWidth - elapsed in current window) / windowWidth
+     *
+     * This gives a smooth sliding effect without storing every request timestamp.
+     */
+    public static class SlidingWindowStrategy implements RateLimitCheckStrategy {
+
+        private final int maxTokens;
+        private final long windowWidth;
+        private final ConcurrentHashMap<String, SlidingWindowState> map;
+
+        public SlidingWindowStrategy(int maxTokens, long windowWidth) {
+            if (maxTokens <= 0) {
+                throw new IllegalArgumentException("maxTokens must be > 0");
+            }
+            if (windowWidth <= 0) {
+                throw new IllegalArgumentException("windowWidth must be > 0");
+            }
+            this.maxTokens = maxTokens;
+            this.windowWidth = windowWidth;
+            this.map = new ConcurrentHashMap<>();
+        }
+
+        @Override
+        public CheckStatus tryAcquire(String userId, int tokens) {
+            long now = System.currentTimeMillis();
+            CheckStatus[] result = new CheckStatus[1];
+
+            map.compute(userId, (key, state) -> {
+                if (state == null) {
+                    state = new SlidingWindowState(now, 0, 0);
+                }
+
+                long currentWindowStart = (now / windowWidth) * windowWidth;
+                long stateWindowStart = (state.getWindowStart() / windowWidth) * windowWidth;
+
+                if (currentWindowStart != stateWindowStart) {
+                    if (currentWindowStart - stateWindowStart == windowWidth) {
+                        // Previous window just ended — shift counts
+                        state.setPreviousCount(state.getCurrentCount());
+                    } else {
+                        // More than one window has passed — previous is irrelevant
+                        state.setPreviousCount(0);
+                    }
+                    state.setCurrentCount(0);
+                    state.setWindowStart(currentWindowStart);
+                }
+
+                // Calculate weighted count from previous window
+                long elapsedInWindow = now - currentWindowStart;
+                double overlapRatio = (windowWidth - elapsedInWindow) / (double) windowWidth;
+                double effectiveCount = state.getPreviousCount() * overlapRatio + state.getCurrentCount();
+
+                if (effectiveCount + tokens <= maxTokens) {
+                    state.setCurrentCount(state.getCurrentCount() + tokens);
+                    int remaining = maxTokens - (int) Math.ceil(effectiveCount + tokens);
+                    remaining = Math.max(remaining, 0);
+                    result[0] = CheckStatus.allow(remaining);
+                } else {
+                    // Estimate retry: how long until enough capacity frees up
+                    // As time passes, overlapRatio decreases, freeing previous window's weight
+                    double excess = effectiveCount + tokens - maxTokens;
+                    long retryAfterMs;
+                    if (state.getPreviousCount() > 0) {
+                        // Each ms reduces effective count by previousCount / windowWidth
+                        double reductionPerMs = state.getPreviousCount() / (double) windowWidth;
+                        retryAfterMs = (long) Math.ceil(excess / reductionPerMs);
+                    } else {
+                        // No previous window weight to decay — must wait for full window reset
+                        retryAfterMs = windowWidth - elapsedInWindow;
+                    }
+                    result[0] = CheckStatus.reject(retryAfterMs);
+                }
+
+                return state;
+            });
+
+            return result[0];
+        }
+
+        /**
+         * Tracks the sliding window state for a single key.
+         */
+        public static class SlidingWindowState {
+            private long windowStart;
+            private long currentCount;
+            private long previousCount;
+
+            public SlidingWindowState(long windowStart, long currentCount, long previousCount) {
+                this.windowStart = windowStart;
+                this.currentCount = currentCount;
+                this.previousCount = previousCount;
+            }
+
+            public long getWindowStart() { return windowStart; }
+            public void setWindowStart(long windowStart) { this.windowStart = windowStart; }
+
+            public long getCurrentCount() { return currentCount; }
+            public void setCurrentCount(long currentCount) { this.currentCount = currentCount; }
+
+            public long getPreviousCount() { return previousCount; }
+            public void setPreviousCount(long previousCount) { this.previousCount = previousCount; }
+        }
+    }
 }

@@ -9,9 +9,14 @@ import java.util.Set;
 
 public class Compare4Solution {
 
-    public static final int EXACT = 1;
-    public static final int MISPLACED = 0;
-    public static final int ABSENT = -1;
+    // ======================== MatchStatus Enum ========================
+
+    public enum MatchStatus {
+        EXACT,
+        MISPLACED,
+        ABSENT
+    }
+
     public static final int MAX_GUESSES = 8;
     public static final int WORD_LENGTH = 4;
 
@@ -57,7 +62,7 @@ public class Compare4Solution {
 
         guessTimes++;
 
-        int[] result = compare(normalized);
+        MatchStatus[] result = compare(normalized);
 
         CompareResult compareResult = new CompareResult(normalized, result);
         if (compareResult.isCorrect()) {
@@ -80,15 +85,15 @@ public class Compare4Solution {
 
     // ======================== Private Helpers ========================
 
-    private int[] compare(String guess) {
-        int[] result = new int[WORD_LENGTH];
-        Arrays.fill(result, ABSENT);
+    private MatchStatus[] compare(String guess) {
+        MatchStatus[] result = new MatchStatus[WORD_LENGTH];
+        Arrays.fill(result, MatchStatus.ABSENT);
         Map<Character, Integer> remaining = new HashMap<>();
 
         // 1st loop: mark exact matches, collect unmatched target letters
         for (int i = 0; i < WORD_LENGTH; i++) {
             if (guess.charAt(i) == target.charAt(i)) {
-                result[i] = EXACT;
+                result[i] = MatchStatus.EXACT;
             } else {
                 remaining.merge(target.charAt(i), 1, Integer::sum);
             }
@@ -96,14 +101,14 @@ public class Compare4Solution {
 
         // 2nd loop: mark misplaced or absent for non-exact positions
         for (int i = 0; i < WORD_LENGTH; i++) {
-            if (result[i] == EXACT) continue;
+            if (result[i] == MatchStatus.EXACT) continue;
             char c = guess.charAt(i);
             int count = remaining.getOrDefault(c, 0);
             if (count > 0) {
-                result[i] = MISPLACED;
+                result[i] = MatchStatus.MISPLACED;
                 remaining.put(c, count - 1);
             } else {
-                result[i] = ABSENT;
+                result[i] = MatchStatus.ABSENT;
             }
         }
 
@@ -114,9 +119,9 @@ public class Compare4Solution {
 
     public static class CompareResult {
         private final String guess;
-        private final int[] result;
+        private final MatchStatus[] result;
 
-        public CompareResult(String guess, int[] result) {
+        public CompareResult(String guess, MatchStatus[] result) {
             this.guess = guess;
             this.result = Arrays.copyOf(result, result.length);
         }
@@ -125,13 +130,13 @@ public class Compare4Solution {
             return guess;
         }
 
-        public int[] getResult() {
+        public MatchStatus[] getResult() {
             return Arrays.copyOf(result, result.length);
         }
 
         public boolean isCorrect() {
-            for (int r : result) {
-                if (r != EXACT) return false;
+            for (MatchStatus r : result) {
+                if (r != MatchStatus.EXACT) return false;
             }
             return true;
         }
@@ -146,7 +151,6 @@ public class Compare4Solution {
                     case EXACT -> sb.append("✓");
                     case MISPLACED -> sb.append("?");
                     case ABSENT -> sb.append("✗");
-                    default -> sb.append(result[i]);
                 }
             }
             sb.append("]");

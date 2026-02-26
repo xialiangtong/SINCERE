@@ -1,3 +1,4 @@
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -7,1006 +8,1163 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("VimOperations Tests")
 public class VimOperationsTest {
 
-    // ==================== Constructor & Query Tests ====================
+    private VimOperations vim;
 
+    @BeforeEach
+    void setUp() {
+        vim = new VimOperations("Hello");
+    }
+
+    // ──────────────────────────────────────────────
+    // 1. Constructor & Getters
+    // ──────────────────────────────────────────────
     @Nested
-    @DisplayName("Constructor & Query Tests")
+    @DisplayName("Constructor & Getter Tests")
     class ConstructorTests {
 
         @Test
-        @DisplayName("default constructor creates empty content with cursor at 0")
-        void testDefaultConstructor() {
-            VimOperations vim = new VimOperations();
-            assertEquals("", vim.getContent());
+        @DisplayName("Default constructor — empty content, cursor at 0")
+        void defaultConstructor() {
+            VimOperations v = new VimOperations();
+            assertEquals("", v.getContent());
+            assertEquals(0, v.getCursor());
+        }
+
+        @Test
+        @DisplayName("String constructor — content set, cursor at 0")
+        void stringConstructor() {
+            assertEquals("Hello", vim.getContent());
             assertEquals(0, vim.getCursor());
         }
 
         @Test
-        @DisplayName("constructor with initial text places cursor at tail")
-        void testConstructorWithText() {
-            VimOperations vim = new VimOperations("hello");
-            assertEquals("hello", vim.getContent());
-            assertEquals(5, vim.getCursor());
-        }
-
-        @Test
-        @DisplayName("constructor with empty string")
-        void testConstructorWithEmptyString() {
-            VimOperations vim = new VimOperations("");
-            assertEquals("", vim.getContent());
-            assertEquals(0, vim.getCursor());
-        }
-
-        @Test
-        @DisplayName("constructor with single character")
-        void testConstructorWithSingleChar() {
-            VimOperations vim = new VimOperations("x");
-            assertEquals("x", vim.getContent());
-            assertEquals(1, vim.getCursor());
+        @DisplayName("Null string constructor — treated as empty")
+        void nullConstructor() {
+            VimOperations v = new VimOperations(null);
+            assertEquals("", v.getContent());
+            assertEquals(0, v.getCursor());
         }
     }
 
-    // ==================== Cursor Movement Tests ====================
-
+    // ──────────────────────────────────────────────
+    // 2. Cursor Movement
+    // ──────────────────────────────────────────────
     @Nested
     @DisplayName("Cursor Movement Tests")
     class CursorMovementTests {
 
         @Test
-        @DisplayName("moveForward advances cursor by one")
-        void testMoveForward() {
-            VimOperations vim = new VimOperations("hello");
-            vim.moveToHead();
-            vim.moveForward();
+        @DisplayName("moveCursorForward — moves from 0 to 1")
+        void moveForward() {
+            assertEquals(1, vim.moveCursorForward());
             assertEquals(1, vim.getCursor());
         }
 
         @Test
-        @DisplayName("moveForward at tail stays at tail (boundary)")
-        void testMoveForwardAtTail() {
-            VimOperations vim = new VimOperations("hello");
-            vim.moveForward(); // already at 5
-            assertEquals(5, vim.getCursor());
-        }
-
-        @Test
-        @DisplayName("moveForward on empty content stays at 0")
-        void testMoveForwardEmpty() {
-            VimOperations vim = new VimOperations();
-            vim.moveForward();
-            assertEquals(0, vim.getCursor());
-        }
-
-        @Test
-        @DisplayName("moveBackward moves cursor back by one")
-        void testMoveBackward() {
-            VimOperations vim = new VimOperations("hello");
-            vim.moveBackward();
-            assertEquals(4, vim.getCursor());
-        }
-
-        @Test
-        @DisplayName("moveBackward at head stays at 0 (boundary)")
-        void testMoveBackwardAtHead() {
-            VimOperations vim = new VimOperations("hello");
-            vim.moveToHead();
-            vim.moveBackward();
-            assertEquals(0, vim.getCursor());
-        }
-
-        @Test
-        @DisplayName("moveBackward on empty content stays at 0")
-        void testMoveBackwardEmpty() {
-            VimOperations vim = new VimOperations();
-            vim.moveBackward();
-            assertEquals(0, vim.getCursor());
-        }
-
-        @Test
-        @DisplayName("moveToHead moves cursor to 0")
-        void testMoveToHead() {
-            VimOperations vim = new VimOperations("hello");
-            vim.moveToHead();
-            assertEquals(0, vim.getCursor());
-        }
-
-        @Test
-        @DisplayName("moveToHead on empty content")
-        void testMoveToHeadEmpty() {
-            VimOperations vim = new VimOperations();
-            vim.moveToHead();
-            assertEquals(0, vim.getCursor());
-        }
-
-        @Test
-        @DisplayName("moveToTail moves cursor to end of content")
-        void testMoveToTail() {
-            VimOperations vim = new VimOperations("hello");
-            vim.moveToHead();
-            vim.moveToTail();
-            assertEquals(5, vim.getCursor());
-        }
-
-        @Test
-        @DisplayName("moveToTail on empty content")
-        void testMoveToTailEmpty() {
-            VimOperations vim = new VimOperations();
-            vim.moveToTail();
-            assertEquals(0, vim.getCursor());
-        }
-
-        @Test
-        @DisplayName("multiple forward moves stop at tail")
-        void testMultipleForwardStopsAtTail() {
-            VimOperations vim = new VimOperations("ab");
-            vim.moveToHead();
-            vim.moveForward();
-            vim.moveForward();
-            vim.moveForward(); // should clamp
-            vim.moveForward(); // should clamp
-            assertEquals(2, vim.getCursor());
-        }
-
-        @Test
-        @DisplayName("multiple backward moves stop at head")
-        void testMultipleBackwardStopsAtHead() {
-            VimOperations vim = new VimOperations("ab");
-            vim.moveBackward();
-            vim.moveBackward();
-            vim.moveBackward(); // should clamp
-            vim.moveBackward(); // should clamp
-            assertEquals(0, vim.getCursor());
-        }
-
-        @Test
-        @DisplayName("forward then backward returns to same position")
-        void testForwardThenBackward() {
-            VimOperations vim = new VimOperations("hello");
-            vim.moveToHead();
-            vim.moveForward();
-            vim.moveForward();
-            int pos = vim.getCursor();
-            vim.moveBackward();
-            vim.moveForward();
-            assertEquals(pos, vim.getCursor());
-        }
-    }
-
-    // ==================== InsertCurrent Tests ====================
-
-    @Nested
-    @DisplayName("InsertCurrent Tests")
-    class InsertCurrentTests {
-
-        @Test
-        @DisplayName("insert char at tail")
-        void testInsertAtTail() {
-            VimOperations vim = new VimOperations("hello");
-            vim.insertCurrent('!');
-            assertEquals("hello!", vim.getContent());
-            assertEquals(6, vim.getCursor());
-        }
-
-        @Test
-        @DisplayName("insert char at head")
-        void testInsertAtHead() {
-            VimOperations vim = new VimOperations("ello");
-            vim.moveToHead();
-            vim.insertCurrent('h');
-            assertEquals("hello", vim.getContent());
-            assertEquals(1, vim.getCursor());
-        }
-
-        @Test
-        @DisplayName("insert char in middle")
-        void testInsertInMiddle() {
-            VimOperations vim = new VimOperations("hllo");
-            vim.moveToHead();
-            vim.moveForward();
-            vim.insertCurrent('e');
-            assertEquals("hello", vim.getContent());
-            assertEquals(2, vim.getCursor());
-        }
-
-        @Test
-        @DisplayName("insert into empty content")
-        void testInsertIntoEmpty() {
-            VimOperations vim = new VimOperations();
-            vim.insertCurrent('a');
-            assertEquals("a", vim.getContent());
-            assertEquals(1, vim.getCursor());
-        }
-
-        @Test
-        @DisplayName("multiple sequential inserts at tail")
-        void testMultipleInserts() {
-            VimOperations vim = new VimOperations();
-            vim.insertCurrent('a');
-            vim.insertCurrent('b');
-            vim.insertCurrent('c');
-            assertEquals("abc", vim.getContent());
+        @DisplayName("moveCursorForward multiple times")
+        void moveForwardMultiple() {
+            vim.moveCursorForward();
+            vim.moveCursorForward();
+            vim.moveCursorForward();
             assertEquals(3, vim.getCursor());
         }
+
+        @Test
+        @DisplayName("moveCursorForward clamped at content.length()")
+        void moveForwardClampedAtTail() {
+            // "Hello" length=5, move 6 times
+            for (int i = 0; i < 6; i++) {
+                vim.moveCursorForward();
+            }
+            assertEquals(5, vim.getCursor());
+        }
+
+        @Test
+        @DisplayName("moveCursorForward on empty content — stays at 0")
+        void moveForwardOnEmpty() {
+            VimOperations v = new VimOperations();
+            assertEquals(0, v.moveCursorForward());
+            assertEquals(0, v.getCursor());
+        }
+
+        @Test
+        @DisplayName("moveCursorBackward — moves from 1 to 0")
+        void moveBackward() {
+            vim.moveCursorForward(); // cursor=1
+            assertEquals(0, vim.moveCursorBackward());
+        }
+
+        @Test
+        @DisplayName("moveCursorBackward clamped at 0")
+        void moveBackwardClampedAtHead() {
+            assertEquals(0, vim.moveCursorBackward());
+            assertEquals(0, vim.getCursor());
+        }
+
+        @Test
+        @DisplayName("moveCursorBackward on empty content — stays at 0")
+        void moveBackwardOnEmpty() {
+            VimOperations v = new VimOperations();
+            assertEquals(0, v.moveCursorBackward());
+        }
+
+        @Test
+        @DisplayName("moveCursorToHead — cursor goes to 0")
+        void moveToHead() {
+            vim.moveCursorForward();
+            vim.moveCursorForward();
+            assertEquals(0, vim.moveCursorToHead());
+            assertEquals(0, vim.getCursor());
+        }
+
+        @Test
+        @DisplayName("moveCursorToHead when already at head — stays 0")
+        void moveToHeadAlreadyAtHead() {
+            assertEquals(0, vim.moveCursorToHead());
+        }
+
+        @Test
+        @DisplayName("moveCursorToTail — cursor goes to content.length()")
+        void moveToTail() {
+            assertEquals(5, vim.moveCursorToTail());
+            assertEquals(5, vim.getCursor());
+        }
+
+        @Test
+        @DisplayName("moveCursorToTail when already at tail — stays")
+        void moveToTailAlreadyAtTail() {
+            vim.moveCursorToTail();
+            assertEquals(5, vim.moveCursorToTail());
+        }
+
+        @Test
+        @DisplayName("moveCursorToTail on empty content — stays 0")
+        void moveToTailOnEmpty() {
+            VimOperations v = new VimOperations();
+            assertEquals(0, v.moveCursorToTail());
+        }
+
+        @Test
+        @DisplayName("Forward then backward — returns to original position")
+        void forwardThenBackwardRoundTrip() {
+            vim.moveCursorForward();
+            vim.moveCursorForward();
+            vim.moveCursorBackward();
+            vim.moveCursorBackward();
+            assertEquals(0, vim.getCursor());
+        }
     }
 
-    // ==================== InsertRange Tests ====================
-
+    // ──────────────────────────────────────────────
+    // 3. Delete Operations
+    // ──────────────────────────────────────────────
     @Nested
-    @DisplayName("InsertRange Tests")
-    class InsertRangeTests {
+    @DisplayName("Delete Tests")
+    class DeleteTests {
 
         @Test
-        @DisplayName("insertRange at tail")
-        void testInsertRangeAtTail() {
-            VimOperations vim = new VimOperations("hello");
-            vim.insertRange(5, 5, " world");
-            assertEquals("hello world", vim.getContent());
+        @DisplayName("deleteBackward — deletes char before cursor")
+        void deleteBackward() {
+            vim.moveCursorForward(); // cursor=1, before 'e'
+            char deleted = vim.deleteBackward();
+            assertEquals('H', deleted);
+            assertEquals("ello", vim.getContent());
+            assertEquals(0, vim.getCursor());
         }
 
         @Test
-        @DisplayName("insertRange at head")
-        void testInsertRangeAtHead() {
-            VimOperations vim = new VimOperations("world");
-            vim.insertRange(0, 0, "hello ");
-            assertEquals("hello world", vim.getContent());
+        @DisplayName("deleteBackward at head — no-op, returns '\\0'")
+        void deleteBackwardAtHead() {
+            char deleted = vim.deleteBackward();
+            assertEquals('\0', deleted);
+            assertEquals("Hello", vim.getContent());
+            assertEquals(0, vim.getCursor());
         }
 
         @Test
-        @DisplayName("insertRange in middle")
-        void testInsertRangeInMiddle() {
-            VimOperations vim = new VimOperations("hd");
-            vim.insertRange(1, 1, "ello worl");
-            assertEquals("hello world", vim.getContent());
+        @DisplayName("deleteBackward on empty content — no-op")
+        void deleteBackwardOnEmpty() {
+            VimOperations v = new VimOperations();
+            assertEquals('\0', v.deleteBackward());
+            assertEquals("", v.getContent());
         }
 
         @Test
-        @DisplayName("insertRange into empty content")
-        void testInsertRangeIntoEmpty() {
-            VimOperations vim = new VimOperations();
-            vim.insertRange(0, 0, "hello");
-            assertEquals("hello", vim.getContent());
-        }
-
-        @Test
-        @DisplayName("insertRange with start beyond tail (boundary)")
-        void testInsertRangeStartBeyondTail() {
-            VimOperations vim = new VimOperations("abc");
-            assertThrows(IndexOutOfBoundsException.class,
-                    () -> vim.insertRange(10, 10, "x"));
-        }
-
-        @Test
-        @DisplayName("insertRange with negative start (boundary)")
-        void testInsertRangeNegativeStart() {
-            VimOperations vim = new VimOperations("abc");
-            assertThrows(IndexOutOfBoundsException.class,
-                    () -> vim.insertRange(-1, -1, "x"));
-        }
-
-        @Test
-        @DisplayName("insertRange with start > end (boundary)")
-        void testInsertRangeStartGreaterThanEnd() {
-            VimOperations vim = new VimOperations("hello");
-            assertThrows(IllegalArgumentException.class,
-                    () -> vim.insertRange(3, 1, "x"));
-        }
-    }
-
-    // ==================== DeleteBackward Tests ====================
-
-    @Nested
-    @DisplayName("DeleteBackward Tests")
-    class DeleteBackwardTests {
-
-        @Test
-        @DisplayName("deleteBackward removes char before cursor")
-        void testDeleteBackward() {
-            VimOperations vim = new VimOperations("hello");
+        @DisplayName("deleteBackward at tail — deletes last char")
+        void deleteBackwardAtTail() {
+            vim.moveCursorToTail(); // cursor=5
             char deleted = vim.deleteBackward();
             assertEquals('o', deleted);
-            assertEquals("hell", vim.getContent());
+            assertEquals("Hell", vim.getContent());
             assertEquals(4, vim.getCursor());
         }
 
         @Test
-        @DisplayName("deleteBackward at head returns null char (boundary)")
-        void testDeleteBackwardAtHead() {
-            VimOperations vim = new VimOperations("hello");
-            vim.moveToHead();
-            char deleted = vim.deleteBackward();
-            assertEquals('\0', deleted);
-            assertEquals("hello", vim.getContent());
-            assertEquals(0, vim.getCursor());
-        }
-
-        @Test
-        @DisplayName("deleteBackward on empty content (boundary)")
-        void testDeleteBackwardEmpty() {
-            VimOperations vim = new VimOperations();
-            char deleted = vim.deleteBackward();
-            assertEquals('\0', deleted);
-            assertEquals("", vim.getContent());
-        }
-
-        @Test
-        @DisplayName("deleteBackward in middle")
-        void testDeleteBackwardMiddle() {
-            VimOperations vim = new VimOperations("hello");
-            vim.moveToHead();
-            vim.moveForward();
-            vim.moveForward();
-            char deleted = vim.deleteBackward();
-            assertEquals('e', deleted);
-            assertEquals("hllo", vim.getContent());
-            assertEquals(1, vim.getCursor());
-        }
-
-        @Test
-        @DisplayName("deleteBackward all chars one by one")
-        void testDeleteBackwardAll() {
-            VimOperations vim = new VimOperations("abc");
-            vim.deleteBackward(); // c
-            vim.deleteBackward(); // b
-            vim.deleteBackward(); // a
-            assertEquals("", vim.getContent());
-            assertEquals(0, vim.getCursor());
-            assertEquals('\0', vim.deleteBackward()); // nothing left
-        }
-    }
-
-    // ==================== DeleteCurrent Tests ====================
-
-    @Nested
-    @DisplayName("DeleteCurrent Tests")
-    class DeleteCurrentTests {
-
-        @Test
-        @DisplayName("deleteCurrent removes char at cursor")
-        void testDeleteCurrent() {
-            VimOperations vim = new VimOperations("hello");
-            vim.moveToHead();
+        @DisplayName("deleteCurrent — deletes char at cursor")
+        void deleteCurrent() {
+            // cursor=0, char at 0 is 'H'
             char deleted = vim.deleteCurrent();
-            assertEquals('h', deleted);
+            assertEquals('H', deleted);
             assertEquals("ello", vim.getContent());
             assertEquals(0, vim.getCursor());
         }
 
         @Test
-        @DisplayName("deleteCurrent at tail returns null char (boundary)")
-        void testDeleteCurrentAtTail() {
-            VimOperations vim = new VimOperations("hello");
+        @DisplayName("deleteCurrent at tail — no-op, returns '\\0'")
+        void deleteCurrentAtTail() {
+            vim.moveCursorToTail(); // cursor=5, nothing at index 5
             char deleted = vim.deleteCurrent();
             assertEquals('\0', deleted);
-            assertEquals("hello", vim.getContent());
-        }
-
-        @Test
-        @DisplayName("deleteCurrent on empty content (boundary)")
-        void testDeleteCurrentEmpty() {
-            VimOperations vim = new VimOperations();
-            char deleted = vim.deleteCurrent();
-            assertEquals('\0', deleted);
-        }
-
-        @Test
-        @DisplayName("deleteCurrent in middle")
-        void testDeleteCurrentMiddle() {
-            VimOperations vim = new VimOperations("hello");
-            vim.moveToHead();
-            vim.moveForward();
-            vim.moveForward();
-            char deleted = vim.deleteCurrent();
-            assertEquals('l', deleted);
-            assertEquals("helo", vim.getContent());
-            assertEquals(2, vim.getCursor());
-        }
-
-        @Test
-        @DisplayName("deleteCurrent on last remaining char")
-        void testDeleteCurrentLastChar() {
-            VimOperations vim = new VimOperations("x");
-            vim.moveToHead();
-            char deleted = vim.deleteCurrent();
-            assertEquals('x', deleted);
-            assertEquals("", vim.getContent());
-            assertEquals(0, vim.getCursor());
-        }
-    }
-
-    // ==================== DeleteRange Tests ====================
-
-    @Nested
-    @DisplayName("DeleteRange Tests")
-    class DeleteRangeTests {
-
-        @Test
-        @DisplayName("deleteRange removes specified range")
-        void testDeleteRange() {
-            VimOperations vim = new VimOperations("hello world");
-            String deleted = vim.deleteRange(5, 11);
-            assertEquals(" world", deleted);
-            assertEquals("hello", vim.getContent());
-        }
-
-        @Test
-        @DisplayName("deleteRange from head")
-        void testDeleteRangeFromHead() {
-            VimOperations vim = new VimOperations("hello world");
-            String deleted = vim.deleteRange(0, 6);
-            assertEquals("hello ", deleted);
-            assertEquals("world", vim.getContent());
-        }
-
-        @Test
-        @DisplayName("deleteRange entire content")
-        void testDeleteRangeAll() {
-            VimOperations vim = new VimOperations("hello");
-            String deleted = vim.deleteRange(0, 5);
-            assertEquals("hello", deleted);
-            assertEquals("", vim.getContent());
-        }
-
-        @Test
-        @DisplayName("deleteRange with start == end returns empty")
-        void testDeleteRangeSameStartEnd() {
-            VimOperations vim = new VimOperations("hello");
-            String deleted = vim.deleteRange(2, 2);
-            assertEquals("", deleted);
-            assertEquals("hello", vim.getContent());
-        }
-
-        @Test
-        @DisplayName("deleteRange with start > end (boundary)")
-        void testDeleteRangeStartGreaterThanEnd() {
-            VimOperations vim = new VimOperations("hello");
-            assertThrows(IllegalArgumentException.class,
-                    () -> vim.deleteRange(4, 2));
-        }
-
-        @Test
-        @DisplayName("deleteRange with negative start (boundary)")
-        void testDeleteRangeNegativeStart() {
-            VimOperations vim = new VimOperations("hello");
-            assertThrows(IndexOutOfBoundsException.class,
-                    () -> vim.deleteRange(-1, 3));
-        }
-
-        @Test
-        @DisplayName("deleteRange with end beyond tail (boundary)")
-        void testDeleteRangeEndBeyondTail() {
-            VimOperations vim = new VimOperations("hello");
-            assertThrows(IndexOutOfBoundsException.class,
-                    () -> vim.deleteRange(2, 100));
-        }
-
-        @Test
-        @DisplayName("deleteRange on empty content (boundary)")
-        void testDeleteRangeEmpty() {
-            VimOperations vim = new VimOperations();
-            String deleted = vim.deleteRange(0, 0);
-            assertEquals("", deleted);
-        }
-    }
-
-    // ==================== DeletePosition Tests ====================
-
-    @Nested
-    @DisplayName("DeletePosition Tests")
-    class DeletePositionTests {
-
-        @Test
-        @DisplayName("deletePosition removes char at given index")
-        void testDeletePosition() {
-            VimOperations vim = new VimOperations("hello");
-            char deleted = vim.deletePosition(0);
-            assertEquals('h', deleted);
-            assertEquals("ello", vim.getContent());
-        }
-
-        @Test
-        @DisplayName("deletePosition at last index")
-        void testDeletePositionLast() {
-            VimOperations vim = new VimOperations("hello");
-            char deleted = vim.deletePosition(4);
-            assertEquals('o', deleted);
-            assertEquals("hell", vim.getContent());
-        }
-
-        @Test
-        @DisplayName("deletePosition in middle")
-        void testDeletePositionMiddle() {
-            VimOperations vim = new VimOperations("hello");
-            char deleted = vim.deletePosition(2);
-            assertEquals('l', deleted);
-            assertEquals("helo", vim.getContent());
-        }
-
-        @Test
-        @DisplayName("deletePosition with negative index (boundary)")
-        void testDeletePositionNegative() {
-            VimOperations vim = new VimOperations("hello");
-            assertThrows(IndexOutOfBoundsException.class,
-                    () -> vim.deletePosition(-1));
-        }
-
-        @Test
-        @DisplayName("deletePosition beyond tail (boundary)")
-        void testDeletePositionBeyondTail() {
-            VimOperations vim = new VimOperations("hello");
-            assertThrows(IndexOutOfBoundsException.class,
-                    () -> vim.deletePosition(5));
-        }
-
-        @Test
-        @DisplayName("deletePosition on empty content (boundary)")
-        void testDeletePositionEmpty() {
-            VimOperations vim = new VimOperations();
-            assertThrows(IndexOutOfBoundsException.class,
-                    () -> vim.deletePosition(0));
-        }
-
-        @Test
-        @DisplayName("deletePosition on single char content")
-        void testDeletePositionSingleChar() {
-            VimOperations vim = new VimOperations("x");
-            char deleted = vim.deletePosition(0);
-            assertEquals('x', deleted);
-            assertEquals("", vim.getContent());
-        }
-    }
-
-    // ==================== ReplaceCurrent Tests ====================
-
-    @Nested
-    @DisplayName("ReplaceCurrent Tests")
-    class ReplaceCurrentTests {
-
-        @Test
-        @DisplayName("replaceCurrent replaces char at cursor")
-        void testReplaceCurrent() {
-            VimOperations vim = new VimOperations("hello");
-            vim.moveToHead();
-            char old = vim.replaceCurrent('H');
-            assertEquals('h', old);
             assertEquals("Hello", vim.getContent());
         }
 
         @Test
-        @DisplayName("replaceCurrent at last position")
-        void testReplaceCurrentLast() {
-            VimOperations vim = new VimOperations("hello");
-            vim.moveToHead();
-            vim.moveForward();
-            vim.moveForward();
-            vim.moveForward();
-            vim.moveForward();
-            char old = vim.replaceCurrent('O');
-            assertEquals('o', old);
-            assertEquals("hellO", vim.getContent());
+        @DisplayName("deleteCurrent on empty content — no-op")
+        void deleteCurrentOnEmpty() {
+            VimOperations v = new VimOperations();
+            assertEquals('\0', v.deleteCurrent());
         }
 
         @Test
-        @DisplayName("replaceCurrent with same char")
-        void testReplaceCurrentSameChar() {
-            VimOperations vim = new VimOperations("hello");
-            vim.moveToHead();
-            char old = vim.replaceCurrent('h');
-            assertEquals('h', old);
-            assertEquals("hello", vim.getContent());
+        @DisplayName("deleteRange — deletes [start, end)")
+        void deleteRange() {
+            // "Hello" → delete [1,3) = "el" → "Hlo"
+            String deleted = vim.deleteRange(1, 3);
+            assertEquals("el", deleted);
+            assertEquals("Hlo", vim.getContent());
         }
 
         @Test
-        @DisplayName("replaceCurrent at tail position (boundary)")
-        void testReplaceCurrentAtTail() {
-            VimOperations vim = new VimOperations("hello");
-            // cursor is at 5, beyond last char
-            assertThrows(IndexOutOfBoundsException.class,
-                    () -> vim.replaceCurrent('x'));
+        @DisplayName("deleteRange — cursor before range stays unchanged")
+        void deleteRangeCursorBeforeRange() {
+            // cursor=0, delete [2,4)
+            String deleted = vim.deleteRange(2, 4);
+            assertEquals("ll", deleted);
+            assertEquals("Heo", vim.getContent());
+            assertEquals(0, vim.getCursor());
         }
 
         @Test
-        @DisplayName("replaceCurrent on empty content (boundary)")
-        void testReplaceCurrentEmpty() {
-            VimOperations vim = new VimOperations();
-            assertThrows(IndexOutOfBoundsException.class,
-                    () -> vim.replaceCurrent('x'));
+        @DisplayName("deleteRange — cursor inside range moves to start")
+        void deleteRangeCursorInsideRange() {
+            vim.moveCursorForward(); // cursor=1
+            vim.moveCursorForward(); // cursor=2
+            // cursor=2, delete [1,4) = "ell"
+            vim.deleteRange(1, 4);
+            assertEquals(1, vim.getCursor());
+        }
+
+        @Test
+        @DisplayName("deleteRange — cursor after range shifts left")
+        void deleteRangeCursorAfterRange() {
+            vim.moveCursorToTail(); // cursor=5
+            // delete [0,2) = "He" → "llo", cursor was 5 → now 3
+            vim.deleteRange(0, 2);
+            assertEquals("llo", vim.getContent());
+            assertEquals(3, vim.getCursor());
+        }
+
+        @Test
+        @DisplayName("deleteRange — start == end, no-op")
+        void deleteRangeEmpty() {
+            String deleted = vim.deleteRange(2, 2);
+            assertEquals("", deleted);
+            assertEquals("Hello", vim.getContent());
+        }
+
+        @Test
+        @DisplayName("deleteRange — start < 0, throws exception")
+        void deleteRangeStartNegative() {
+            assertThrows(IllegalArgumentException.class, () -> vim.deleteRange(-1, 2));
+        }
+
+        @Test
+        @DisplayName("deleteRange — end > content.length(), throws exception")
+        void deleteRangeEndBeyondLength() {
+            assertThrows(IllegalArgumentException.class, () -> vim.deleteRange(0, 10));
+        }
+
+        @Test
+        @DisplayName("deleteRange — start > end, throws exception")
+        void deleteRangeStartGreaterThanEnd() {
+            assertThrows(IllegalArgumentException.class, () -> vim.deleteRange(3, 1));
+        }
+
+        @Test
+        @DisplayName("deleteBackward multiple times consecutively")
+        void deleteBackwardConsecutive() {
+            vim.moveCursorForward();
+            vim.moveCursorForward();
+            vim.moveCursorForward(); // cursor=3
+            assertEquals('l', vim.deleteBackward()); // "Helo", cursor=2
+            assertEquals('e', vim.deleteBackward()); // "Hlo", cursor=1
+            assertEquals('H', vim.deleteBackward()); // "lo", cursor=0
+            assertEquals('\0', vim.deleteBackward()); // no-op at head
+            assertEquals("lo", vim.getContent());
+            assertEquals(0, vim.getCursor());
+        }
+
+        @Test
+        @DisplayName("deleteCurrent on single-char content — leaves empty")
+        void deleteCurrentSingleChar() {
+            VimOperations v = new VimOperations("X");
+            char deleted = v.deleteCurrent();
+            assertEquals('X', deleted);
+            assertEquals("", v.getContent());
+            assertEquals(0, v.getCursor());
+        }
+
+        @Test
+        @DisplayName("deleteRange entire content — empties, cursor to 0")
+        void deleteRangeEntireContent() {
+            vim.moveCursorForward();
+            vim.moveCursorForward(); // cursor=2
+            vim.deleteRange(0, 5);
+            assertEquals("", vim.getContent());
+            assertEquals(0, vim.getCursor());
+        }
+
+        @Test
+        @DisplayName("deleteRange (0,0) at head — no-op")
+        void deleteRangeZeroZero() {
+            String deleted = vim.deleteRange(0, 0);
+            assertEquals("", deleted);
+            assertEquals("Hello", vim.getContent());
         }
     }
 
-    // ==================== ReplaceRange Tests ====================
-
+    // ──────────────────────────────────────────────
+    // 4. Insert Operations
+    // ──────────────────────────────────────────────
     @Nested
-    @DisplayName("ReplaceRange Tests")
-    class ReplaceRangeTests {
+    @DisplayName("Insert Tests")
+    class InsertTests {
 
         @Test
-        @DisplayName("replaceRange replaces text in range")
-        void testReplaceRange() {
-            VimOperations vim = new VimOperations("hello world");
-            String old = vim.replaceRange(0, 5, "HELLO");
-            assertEquals("hello", old);
-            assertEquals("HELLO world", vim.getContent());
+        @DisplayName("insertCurrent — inserts at cursor, cursor moves forward")
+        void insertCurrent() {
+            char inserted = vim.insertCurrent('X');
+            assertEquals('X', inserted);
+            assertEquals("XHello", vim.getContent());
+            assertEquals(1, vim.getCursor());
         }
 
         @Test
-        @DisplayName("replaceRange with shorter replacement")
-        void testReplaceRangeShorter() {
-            VimOperations vim = new VimOperations("hello world");
-            String old = vim.replaceRange(0, 5, "hi");
-            assertEquals("hello", old);
-            assertEquals("hi world", vim.getContent());
+        @DisplayName("insertCurrent at tail — appends")
+        void insertCurrentAtTail() {
+            vim.moveCursorToTail();
+            vim.insertCurrent('!');
+            assertEquals("Hello!", vim.getContent());
+            assertEquals(6, vim.getCursor());
         }
 
         @Test
-        @DisplayName("replaceRange with longer replacement")
-        void testReplaceRangeLonger() {
-            VimOperations vim = new VimOperations("hi world");
-            String old = vim.replaceRange(0, 2, "hello");
-            assertEquals("hi", old);
-            assertEquals("hello world", vim.getContent());
+        @DisplayName("insertCurrent in middle")
+        void insertCurrentInMiddle() {
+            vim.moveCursorForward();
+            vim.moveCursorForward(); // cursor=2
+            vim.insertCurrent('X');
+            assertEquals("HeXllo", vim.getContent());
+            assertEquals(3, vim.getCursor());
         }
 
         @Test
-        @DisplayName("replaceRange with empty replacement (acts as delete)")
-        void testReplaceRangeWithEmpty() {
-            VimOperations vim = new VimOperations("hello world");
-            String old = vim.replaceRange(5, 11, "");
-            assertEquals(" world", old);
-            assertEquals("hello", vim.getContent());
+        @DisplayName("insertCurrent on empty content")
+        void insertCurrentOnEmpty() {
+            VimOperations v = new VimOperations();
+            v.insertCurrent('A');
+            assertEquals("A", v.getContent());
+            assertEquals(1, v.getCursor());
         }
 
         @Test
-        @DisplayName("replaceRange with empty range (acts as insert)")
-        void testReplaceRangeEmptyRange() {
-            VimOperations vim = new VimOperations("helloworld");
-            String old = vim.replaceRange(5, 5, " ");
-            assertEquals("", old);
-            assertEquals("hello world", vim.getContent());
+        @DisplayName("insertRange — inserts string at position")
+        void insertRange() {
+            String inserted = vim.insertRange(2, "XY");
+            assertEquals("XY", inserted);
+            assertEquals("HeXYllo", vim.getContent());
+        }
+
+        @Test
+        @DisplayName("insertRange — cursor before pos stays")
+        void insertRangeCursorBeforePos() {
+            // cursor=0, insert at pos=3
+            vim.insertRange(3, "XX");
+            assertEquals(0, vim.getCursor());
+        }
+
+        @Test
+        @DisplayName("insertRange — cursor at/after pos shifts right")
+        void insertRangeCursorAfterPos() {
+            vim.moveCursorToTail(); // cursor=5
+            vim.insertRange(2, "XX"); // "HeXXllo", length 7
+            assertEquals(7, vim.getCursor());
+        }
+
+        @Test
+        @DisplayName("insertRange at 0 — prepends")
+        void insertRangeAtHead() {
+            vim.insertRange(0, "Hi ");
+            assertEquals("Hi Hello", vim.getContent());
+        }
+
+        @Test
+        @DisplayName("insertRange at length — appends")
+        void insertRangeAtTail() {
+            vim.insertRange(5, " World");
+            assertEquals("Hello World", vim.getContent());
+        }
+
+        @Test
+        @DisplayName("insertRange — pos < 0, throws exception")
+        void insertRangeNegativePos() {
+            assertThrows(IllegalArgumentException.class, () -> vim.insertRange(-1, "X"));
+        }
+
+        @Test
+        @DisplayName("insertRange — pos > content.length(), throws exception")
+        void insertRangePosBeyondLength() {
+            assertThrows(IllegalArgumentException.class, () -> vim.insertRange(10, "X"));
+        }
+
+        @Test
+        @DisplayName("insertCurrent multiple chars consecutively")
+        void insertCurrentConsecutive() {
+            vim.insertCurrent('A'); // "AHello", cursor=1
+            vim.insertCurrent('B'); // "ABHello", cursor=2
+            vim.insertCurrent('C'); // "ABCHello", cursor=3
+            assertEquals("ABCHello", vim.getContent());
+            assertEquals(3, vim.getCursor());
+        }
+
+        @Test
+        @DisplayName("insertRange with empty string — no-op")
+        void insertRangeEmptyString() {
+            vim.insertRange(2, "");
+            assertEquals("Hello", vim.getContent());
+            assertEquals(0, vim.getCursor());
+        }
+
+        @Test
+        @DisplayName("insertRange with null — throws exception")
+        void insertRangeNull() {
+            assertThrows(IllegalArgumentException.class, () -> vim.insertRange(2, null));
+        }
+    }
+
+    // ──────────────────────────────────────────────
+    // 5. Replace Operations
+    // ──────────────────────────────────────────────
+    @Nested
+    @DisplayName("Replace Tests")
+    class ReplaceTests {
+
+        @Test
+        @DisplayName("replaceCurrent — replaces char at cursor")
+        void replaceCurrent() {
+            char old = vim.replaceCurrent('X');
+            assertEquals('H', old);
+            assertEquals("Xello", vim.getContent());
+            assertEquals(0, vim.getCursor());
+        }
+
+        @Test
+        @DisplayName("replaceCurrent at tail — no-op, returns '\\0'")
+        void replaceCurrentAtTail() {
+            vim.moveCursorToTail();
+            char old = vim.replaceCurrent('X');
+            assertEquals('\0', old);
+            assertEquals("Hello", vim.getContent());
+        }
+
+        @Test
+        @DisplayName("replaceCurrent on empty — no-op")
+        void replaceCurrentOnEmpty() {
+            VimOperations v = new VimOperations();
+            assertEquals('\0', v.replaceCurrent('X'));
+        }
+
+        @Test
+        @DisplayName("replaceCurrent in middle")
+        void replaceCurrentInMiddle() {
+            vim.moveCursorForward();
+            vim.moveCursorForward(); // cursor=2
+            char old = vim.replaceCurrent('X');
+            assertEquals('l', old);
+            assertEquals("HeXlo", vim.getContent());
+            assertEquals(2, vim.getCursor());
+        }
+
+        @Test
+        @DisplayName("replaceRange — replaces [start, end) with new string")
+        void replaceRange() {
+            // "Hello" → replace [1,4) "ell" with "XY" → "HXYo"
+            String old = vim.replaceRange(1, 4, "XY");
+            assertEquals("ell", old);
+            assertEquals("HXYo", vim.getContent());
+        }
+
+        @Test
+        @DisplayName("replaceRange — replacement longer than original")
+        void replaceRangeLonger() {
+            // "Hello" → replace [0,1) "H" with "XYZ" → "XYZello"
+            String old = vim.replaceRange(0, 1, "XYZ");
+            assertEquals("H", old);
+            assertEquals("XYZello", vim.getContent());
+        }
+
+        @Test
+        @DisplayName("replaceRange — replacement shorter than original")
+        void replaceRangeShorter() {
+            // "Hello" → replace [0,3) "Hel" with "X" → "Xlo"
+            String old = vim.replaceRange(0, 3, "X");
+            assertEquals("Hel", old);
+            assertEquals("Xlo", vim.getContent());
+        }
+
+        @Test
+        @DisplayName("replaceRange — cursor before range stays")
+        void replaceRangeCursorBefore() {
+            // cursor=0, replace [2,4)
+            vim.replaceRange(2, 4, "XX");
+            assertEquals(0, vim.getCursor());
+        }
+
+        @Test
+        @DisplayName("replaceRange — cursor inside range moves to start")
+        void replaceRangeCursorInside() {
+            vim.moveCursorForward();
+            vim.moveCursorForward(); // cursor=2
+            vim.replaceRange(1, 4, "X");
+            assertEquals(1, vim.getCursor());
+        }
+
+        @Test
+        @DisplayName("replaceRange — cursor after range adjusts")
+        void replaceRangeCursorAfter() {
+            vim.moveCursorToTail(); // cursor=5
+            // replace [0,2) "He" with "X" → "Xllo", cursor was 5 → 5 - 2 + 1 = 4
+            vim.replaceRange(0, 2, "X");
+            assertEquals("Xllo", vim.getContent());
+            assertEquals(4, vim.getCursor());
+        }
+
+        @Test
+        @DisplayName("replaceRange — start < 0, throws exception")
+        void replaceRangeStartNegative() {
+            assertThrows(IllegalArgumentException.class, () -> vim.replaceRange(-1, 2, "X"));
+        }
+
+        @Test
+        @DisplayName("replaceRange — end > content.length(), throws exception")
+        void replaceRangeEndBeyondLength() {
+            assertThrows(IllegalArgumentException.class, () -> vim.replaceRange(0, 10, "X"));
+        }
+
+        @Test
+        @DisplayName("replaceRange — start > end, throws exception")
+        void replaceRangeStartGreaterThanEnd() {
+            assertThrows(IllegalArgumentException.class, () -> vim.replaceRange(3, 1, "X"));
+        }
+
+        @Test
+        @DisplayName("replaceCurrent with same char — content unchanged")
+        void replaceCurrentSameChar() {
+            char old = vim.replaceCurrent('H');
+            assertEquals('H', old);
+            assertEquals("Hello", vim.getContent());
+        }
+
+        @Test
+        @DisplayName("replaceRange with empty replacement — acts as delete")
+        void replaceRangeEmptyReplacement() {
+            String old = vim.replaceRange(1, 4, "");
+            assertEquals("ell", old);
+            assertEquals("Ho", vim.getContent());
         }
 
         @Test
         @DisplayName("replaceRange entire content")
-        void testReplaceRangeAll() {
-            VimOperations vim = new VimOperations("old");
-            String old = vim.replaceRange(0, 3, "new content");
-            assertEquals("old", old);
-            assertEquals("new content", vim.getContent());
+        void replaceRangeEntireContent() {
+            String old = vim.replaceRange(0, 5, "World");
+            assertEquals("Hello", old);
+            assertEquals("World", vim.getContent());
         }
 
         @Test
-        @DisplayName("replaceRange with start > end (boundary)")
-        void testReplaceRangeStartGreaterThanEnd() {
-            VimOperations vim = new VimOperations("hello");
-            assertThrows(IllegalArgumentException.class,
-                    () -> vim.replaceRange(5, 2, "x"));
+        @DisplayName("replaceRange with null replacement — throws exception")
+        void replaceRangeNullReplacement() {
+            assertThrows(IllegalArgumentException.class, () -> vim.replaceRange(0, 2, null));
         }
 
         @Test
-        @DisplayName("replaceRange with negative start (boundary)")
-        void testReplaceRangeNegativeStart() {
-            VimOperations vim = new VimOperations("hello");
-            assertThrows(IndexOutOfBoundsException.class,
-                    () -> vim.replaceRange(-1, 3, "x"));
-        }
-
-        @Test
-        @DisplayName("replaceRange with end beyond tail (boundary)")
-        void testReplaceRangeEndBeyondTail() {
-            VimOperations vim = new VimOperations("hello");
-            assertThrows(IndexOutOfBoundsException.class,
-                    () -> vim.replaceRange(2, 100, "x"));
-        }
-
-        @Test
-        @DisplayName("replaceRange on empty content with 0,0 range")
-        void testReplaceRangeEmptyContent() {
-            VimOperations vim = new VimOperations();
-            String old = vim.replaceRange(0, 0, "hello");
-            assertEquals("", old);
-            assertEquals("hello", vim.getContent());
+        @DisplayName("replaceRange start == end — acts as insert")
+        void replaceRangeStartEqualsEnd() {
+            vim.replaceRange(2, 2, "XY");
+            assertEquals("HeXYllo", vim.getContent());
         }
     }
 
-    // ==================== Undo Tests ====================
-
+    // ──────────────────────────────────────────────
+    // 6. Combined Operations
+    // ──────────────────────────────────────────────
     @Nested
-    @DisplayName("Undo Tests")
-    class UndoTests {
+    @DisplayName("Combined Operation Tests")
+    class CombinedTests {
 
         @Test
-        @DisplayName("undo on fresh editor returns false")
-        void testUndoEmpty() {
-            VimOperations vim = new VimOperations("hello");
-            assertFalse(vim.undo());
+        @DisplayName("Insert then delete — content restored")
+        void insertThenDelete() {
+            vim.insertCurrent('X'); // "XHello", cursor=1
+            vim.moveCursorBackward(); // cursor=0
+            vim.deleteCurrent(); // delete 'X' → "Hello", cursor=0
+            assertEquals("Hello", vim.getContent());
+            assertEquals(0, vim.getCursor());
         }
 
         @Test
-        @DisplayName("undo insertCurrent restores content and cursor")
-        void testUndoInsertCurrent() {
-            VimOperations vim = new VimOperations("hello");
-            vim.insertCurrent('!');
-            assertEquals("hello!", vim.getContent());
-            vim.undo();
-            assertEquals("hello", vim.getContent());
-            assertEquals(5, vim.getCursor());
+        @DisplayName("Move to tail, insert, move to head")
+        void moveInsertMove() {
+            vim.moveCursorToTail();
+            vim.insertCurrent('!'); // "Hello!", cursor=6
+            vim.moveCursorToHead(); // cursor=0
+            assertEquals("Hello!", vim.getContent());
+            assertEquals(0, vim.getCursor());
         }
 
         @Test
-        @DisplayName("undo insertRange restores content")
-        void testUndoInsertRange() {
-            VimOperations vim = new VimOperations("hello");
-            vim.insertRange(5, 5, " world");
-            assertEquals("hello world", vim.getContent());
-            vim.undo();
-            assertEquals("hello", vim.getContent());
+        @DisplayName("Multiple deleteBackward from tail — empties content")
+        void deleteAllFromTail() {
+            vim.moveCursorToTail();
+            for (int i = 0; i < 5; i++) {
+                vim.deleteBackward();
+            }
+            assertEquals("", vim.getContent());
+            assertEquals(0, vim.getCursor());
         }
 
         @Test
-        @DisplayName("undo deleteBackward restores deleted char")
-        void testUndoDeleteBackward() {
-            VimOperations vim = new VimOperations("hello");
-            vim.deleteBackward();
-            assertEquals("hell", vim.getContent());
-            vim.undo();
-            assertEquals("hello", vim.getContent());
-            assertEquals(5, vim.getCursor());
+        @DisplayName("Replace then move and insert")
+        void replaceThenInsert() {
+            vim.replaceCurrent('J'); // "Jello", cursor=0
+            vim.moveCursorToTail();
+            vim.insertCurrent('!'); // "Jello!", cursor=6
+            assertEquals("Jello!", vim.getContent());
         }
 
         @Test
-        @DisplayName("undo deleteCurrent restores deleted char")
-        void testUndoDeleteCurrent() {
-            VimOperations vim = new VimOperations("hello");
-            vim.moveToHead();
-            vim.deleteCurrent();
-            assertEquals("ello", vim.getContent());
+        @DisplayName("deleteBackward after insertCurrent — returns inserted char")
+        void deleteBackwardAfterInsert() {
+            vim.insertCurrent('Z'); // "ZHello", cursor=1
+            char deleted = vim.deleteBackward(); // back to "Hello", cursor=0
+            assertEquals('Z', deleted);
+            assertEquals("Hello", vim.getContent());
+            assertEquals(0, vim.getCursor());
+        }
+
+        @Test
+        @DisplayName("All operations on single-character content")
+        void singleCharContent() {
+            VimOperations v = new VimOperations("A");
+            assertEquals(0, v.getCursor());
+
+            // replaceCurrent
+            assertEquals('A', v.replaceCurrent('B'));
+            assertEquals("B", v.getContent());
+
+            // moveCursorForward
+            v.moveCursorForward(); // cursor=1
+            assertEquals(1, v.getCursor());
+
+            // deleteBackward at tail
+            assertEquals('B', v.deleteBackward());
+            assertEquals("", v.getContent());
+            assertEquals(0, v.getCursor());
+
+            // insertCurrent on empty
+            v.insertCurrent('C');
+            assertEquals("C", v.getContent());
+            assertEquals(1, v.getCursor());
+
+            // moveCursorBackward
+            v.moveCursorBackward(); // cursor=0
+            assertEquals(0, v.getCursor());
+
+            // deleteCurrent
+            assertEquals('C', v.deleteCurrent());
+            assertEquals("", v.getContent());
+        }
+    }
+
+    // ──────────────────────────────────────────────
+    // 7. Undo / Redo Operations
+    // ──────────────────────────────────────────────
+    @Nested
+    @DisplayName("Undo/Redo Tests")
+    class UndoRedoTests {
+
+        // --- Undo basics ---
+
+        @Test
+        @DisplayName("undo on empty history — no-op")
+        void undoEmptyHistory() {
             vim.undo();
-            assertEquals("hello", vim.getContent());
+            assertEquals("Hello", vim.getContent());
+            assertEquals(0, vim.getCursor());
+        }
+
+        @Test
+        @DisplayName("undo insertCurrent — removes inserted char, restores cursor")
+        void undoInsertCurrent() {
+            vim.insertCurrent('X'); // "XHello", cursor=1
+            vim.undo();
+            assertEquals("Hello", vim.getContent());
+            assertEquals(0, vim.getCursor());
+        }
+
+        @Test
+        @DisplayName("undo deleteBackward — restores char and cursor")
+        void undoDeleteBackward() {
+            vim.moveCursorForward(); // cursor=1
+            vim.deleteBackward(); // "ello", cursor=0
+            vim.undo();
+            assertEquals("Hello", vim.getContent());
             assertEquals(1, vim.getCursor());
         }
 
         @Test
-        @DisplayName("undo deleteRange restores deleted range")
-        void testUndoDeleteRange() {
-            VimOperations vim = new VimOperations("hello world");
-            vim.deleteRange(5, 11);
-            assertEquals("hello", vim.getContent());
+        @DisplayName("undo deleteCurrent — restores char and cursor")
+        void undoDeleteCurrent() {
+            vim.deleteCurrent(); // "ello", cursor=0
             vim.undo();
-            assertEquals("hello world", vim.getContent());
-        }
-
-        @Test
-        @DisplayName("undo deletePosition restores deleted char")
-        void testUndoDeletePosition() {
-            VimOperations vim = new VimOperations("hello");
-            vim.deletePosition(2);
-            assertEquals("helo", vim.getContent());
-            vim.undo();
-            assertEquals("hello", vim.getContent());
-        }
-
-        @Test
-        @DisplayName("undo replaceCurrent restores original char")
-        void testUndoReplaceCurrent() {
-            VimOperations vim = new VimOperations("hello");
-            vim.moveToHead();
-            vim.replaceCurrent('H');
             assertEquals("Hello", vim.getContent());
-            vim.undo();
-            assertEquals("hello", vim.getContent());
+            assertEquals(0, vim.getCursor());
         }
 
         @Test
-        @DisplayName("undo replaceRange restores original text")
-        void testUndoReplaceRange() {
-            VimOperations vim = new VimOperations("hello world");
-            vim.replaceRange(0, 5, "HELLO");
-            assertEquals("HELLO world", vim.getContent());
+        @DisplayName("undo deleteRange — restores substring and cursor")
+        void undoDeleteRange() {
+            vim.moveCursorForward();
+            vim.moveCursorForward(); // cursor=2
+            vim.deleteRange(1, 4); // "Ho", cursor=1
             vim.undo();
-            assertEquals("hello world", vim.getContent());
+            assertEquals("Hello", vim.getContent());
+            assertEquals(2, vim.getCursor());
         }
 
         @Test
-        @DisplayName("multiple undos in sequence")
-        void testMultipleUndos() {
-            VimOperations vim = new VimOperations();
-            vim.insertCurrent('a');
-            vim.insertCurrent('b');
-            vim.insertCurrent('c');
-            assertEquals("abc", vim.getContent());
-
+        @DisplayName("undo insertRange — removes inserted string and restores cursor")
+        void undoInsertRange() {
+            vim.moveCursorToTail(); // cursor=5
+            vim.insertRange(2, "XY"); // "HeXYllo", cursor=7
             vim.undo();
-            assertEquals("ab", vim.getContent());
-            vim.undo();
-            assertEquals("a", vim.getContent());
-            vim.undo();
-            assertEquals("", vim.getContent());
-            assertFalse(vim.undo()); // nothing left
-        }
-    }
-
-    // ==================== Redo Tests ====================
-
-    @Nested
-    @DisplayName("Redo Tests")
-    class RedoTests {
-
-        @Test
-        @DisplayName("redo on fresh editor returns false")
-        void testRedoEmpty() {
-            VimOperations vim = new VimOperations("hello");
-            assertFalse(vim.redo());
+            assertEquals("Hello", vim.getContent());
+            assertEquals(5, vim.getCursor());
         }
 
         @Test
-        @DisplayName("redo after undo restores the operation")
-        void testRedoAfterUndo() {
-            VimOperations vim = new VimOperations("hello");
-            vim.insertCurrent('!');
+        @DisplayName("undo replaceCurrent — restores original char")
+        void undoReplaceCurrent() {
+            vim.replaceCurrent('Z'); // "Zello", cursor=0
             vim.undo();
-            assertEquals("hello", vim.getContent());
+            assertEquals("Hello", vim.getContent());
+            assertEquals(0, vim.getCursor());
+        }
+
+        @Test
+        @DisplayName("undo replaceRange — restores original substring and cursor")
+        void undoReplaceRange() {
+            vim.moveCursorToTail(); // cursor=5
+            vim.replaceRange(0, 2, "X"); // "Xllo", cursor=4
+            vim.undo();
+            assertEquals("Hello", vim.getContent());
+            assertEquals(5, vim.getCursor());
+        }
+
+        // --- Redo basics ---
+
+        @Test
+        @DisplayName("redo on empty redoStack — no-op")
+        void redoEmptyStack() {
             vim.redo();
-            assertEquals("hello!", vim.getContent());
+            assertEquals("Hello", vim.getContent());
+            assertEquals(0, vim.getCursor());
+        }
+
+        @Test
+        @DisplayName("redo after undo insertCurrent — re-inserts char")
+        void redoInsertCurrent() {
+            vim.insertCurrent('X'); // "XHello", cursor=1
+            vim.undo(); // "Hello", cursor=0
+            vim.redo(); // "XHello", cursor=1
+            assertEquals("XHello", vim.getContent());
+            assertEquals(1, vim.getCursor());
+        }
+
+        @Test
+        @DisplayName("redo after undo deleteBackward — re-deletes char")
+        void redoDeleteBackward() {
+            vim.moveCursorForward(); // cursor=1
+            vim.deleteBackward(); // "ello", cursor=0
+            vim.undo(); // "Hello", cursor=1
+            vim.redo(); // "ello", cursor=0
+            assertEquals("ello", vim.getContent());
+            assertEquals(0, vim.getCursor());
+        }
+
+        @Test
+        @DisplayName("redo after undo replaceRange — re-applies replacement")
+        void redoReplaceRange() {
+            vim.replaceRange(0, 3, "XY"); // "XYlo", cursor=0
+            vim.undo(); // "Hello", cursor=0
+            vim.redo(); // "XYlo", cursor=0
+            assertEquals("XYlo", vim.getContent());
+        }
+
+        // --- Multiple undo/redo ---
+
+        @Test
+        @DisplayName("multiple undos — unwinds all operations")
+        void multipleUndos() {
+            vim.insertCurrent('A'); // "AHello", cursor=1
+            vim.insertCurrent('B'); // "ABHello", cursor=2
+            vim.insertCurrent('C'); // "ABCHello", cursor=3
+            vim.undo(); // "ABHello", cursor=2
+            assertEquals("ABHello", vim.getContent());
+            assertEquals(2, vim.getCursor());
+            vim.undo(); // "AHello", cursor=1
+            assertEquals("AHello", vim.getContent());
+            assertEquals(1, vim.getCursor());
+            vim.undo(); // "Hello", cursor=0
+            assertEquals("Hello", vim.getContent());
+            assertEquals(0, vim.getCursor());
+        }
+
+        @Test
+        @DisplayName("multiple redos — re-applies all undone operations")
+        void multipleRedos() {
+            vim.insertCurrent('A');
+            vim.insertCurrent('B');
+            vim.insertCurrent('C');
+            vim.undo();
+            vim.undo();
+            vim.undo(); // back to "Hello"
+            vim.redo(); // "AHello"
+            assertEquals("AHello", vim.getContent());
+            assertEquals(1, vim.getCursor());
+            vim.redo(); // "ABHello"
+            assertEquals("ABHello", vim.getContent());
+            assertEquals(2, vim.getCursor());
+            vim.redo(); // "ABCHello"
+            assertEquals("ABCHello", vim.getContent());
+            assertEquals(3, vim.getCursor());
+        }
+
+        @Test
+        @DisplayName("undo past beginning — extra undos are no-ops")
+        void undoPastBeginning() {
+            vim.insertCurrent('X');
+            vim.undo();
+            vim.undo(); // no-op
+            vim.undo(); // no-op
+            assertEquals("Hello", vim.getContent());
+            assertEquals(0, vim.getCursor());
+        }
+
+        @Test
+        @DisplayName("redo past end — extra redos are no-ops")
+        void redoPastEnd() {
+            vim.insertCurrent('X');
+            vim.undo();
+            vim.redo();
+            vim.redo(); // no-op
+            assertEquals("XHello", vim.getContent());
+            assertEquals(1, vim.getCursor());
+        }
+
+        // --- Redo invalidation ---
+
+        @Test
+        @DisplayName("new operation after undo — clears redo stack")
+        void newOpClearsRedo() {
+            vim.insertCurrent('A'); // "AHello"
+            vim.insertCurrent('B'); // "ABHello"
+            vim.undo(); // "AHello"
+            vim.insertCurrent('Z'); // "AZHello" — diverged
+            vim.redo(); // no-op, redo stack was cleared
+            assertEquals("AZHello", vim.getContent());
+            assertEquals(2, vim.getCursor());
+        }
+
+        // --- Cursor movement does not affect undo/redo ---
+
+        @Test
+        @DisplayName("cursor moves are not in undo history")
+        void cursorMovesNotUndone() {
+            vim.insertCurrent('X'); // "XHello", cursor=1
+            vim.moveCursorForward(); // cursor=2
+            vim.moveCursorForward(); // cursor=3
+            vim.undo(); // undoes insertCurrent, not cursor moves
+            assertEquals("Hello", vim.getContent());
+            assertEquals(0, vim.getCursor());
+        }
+
+        // --- Mixed operation undo/redo ---
+
+        @Test
+        @DisplayName("undo mixed ops — delete then insert then undo both")
+        void undoMixedOps() {
+            vim.deleteCurrent(); // "ello", cursor=0
+            vim.insertCurrent('Z'); // "Zello", cursor=1
+            vim.undo(); // "ello", cursor=0
+            assertEquals("ello", vim.getContent());
+            assertEquals(0, vim.getCursor());
+            vim.undo(); // "Hello", cursor=0
+            assertEquals("Hello", vim.getContent());
+            assertEquals(0, vim.getCursor());
+        }
+
+        @Test
+        @DisplayName("undo/redo round-trip — state fully restored")
+        void undoRedoRoundTrip() {
+            vim.replaceCurrent('J'); // "Jello"
+            vim.moveCursorToTail();
+            vim.insertCurrent('!'); // "Jello!"
+            vim.undo(); // "Jello", cursor=5
+            vim.undo(); // "Hello", cursor=0
+            vim.redo(); // "Jello", cursor=0
+            vim.redo(); // "Jello!", cursor=6
+            assertEquals("Jello!", vim.getContent());
             assertEquals(6, vim.getCursor());
         }
 
         @Test
-        @DisplayName("redo deleteBackward")
-        void testRedoDeleteBackward() {
-            VimOperations vim = new VimOperations("hello");
-            vim.deleteBackward();
-            vim.undo();
-            assertEquals("hello", vim.getContent());
-            vim.redo();
-            assertEquals("hell", vim.getContent());
-        }
-
-        @Test
-        @DisplayName("redo replaceCurrent")
-        void testRedoReplaceCurrent() {
-            VimOperations vim = new VimOperations("hello");
-            vim.moveToHead();
-            vim.replaceCurrent('H');
-            vim.undo();
-            vim.redo();
+        @DisplayName("undo deleteRange then redo — range deleted again")
+        void undoRedoDeleteRange() {
+            vim.deleteRange(1, 4); // "Ho", cursor=0
+            vim.undo(); // "Hello", cursor=0
             assertEquals("Hello", vim.getContent());
+            vim.redo(); // "Ho", cursor=0
+            assertEquals("Ho", vim.getContent());
         }
 
         @Test
-        @DisplayName("new edit clears redo stack")
-        void testNewEditClearsRedo() {
-            VimOperations vim = new VimOperations("hello");
-            vim.insertCurrent('!');
+        @DisplayName("undo insertRange then redo — range inserted again")
+        void undoRedoInsertRange() {
+            vim.insertRange(2, "XYZ"); // "HeXYZllo"
             vim.undo();
-            vim.insertCurrent('?'); // new edit clears redo
-            assertFalse(vim.redo());
-            assertEquals("hello?", vim.getContent());
-        }
-
-        @Test
-        @DisplayName("multiple undo then redo")
-        void testMultipleUndoRedo() {
-            VimOperations vim = new VimOperations();
-            vim.insertCurrent('a');
-            vim.insertCurrent('b');
-            vim.insertCurrent('c');
-
-            vim.undo(); // remove c
-            vim.undo(); // remove b
-            assertEquals("a", vim.getContent());
-
-            vim.redo(); // re-add b
-            assertEquals("ab", vim.getContent());
-            vim.redo(); // re-add c
-            assertEquals("abc", vim.getContent());
-            assertFalse(vim.redo()); // nothing left
-        }
-    }
-
-    // ==================== Undo/Redo Interaction Tests ====================
-
-    @Nested
-    @DisplayName("Undo/Redo Interaction Tests")
-    class UndoRedoInteractionTests {
-
-        @Test
-        @DisplayName("undo-redo-undo cycle")
-        void testUndoRedoUndoCycle() {
-            VimOperations vim = new VimOperations("hello");
-            vim.insertCurrent('!');
-            assertEquals("hello!", vim.getContent());
-
-            vim.undo();
-            assertEquals("hello", vim.getContent());
-
-            vim.redo();
-            assertEquals("hello!", vim.getContent());
-
-            vim.undo();
-            assertEquals("hello", vim.getContent());
-        }
-
-        @Test
-        @DisplayName("interleaved operations with undo")
-        void testInterleavedOps() {
-            VimOperations vim = new VimOperations("hello");
-            vim.moveToHead();
-            vim.replaceCurrent('H');    // Hello, cursor=0
-            vim.moveToTail();           // cursor=5
-            vim.insertCurrent('!');     // Hello!, cursor=6
-            vim.moveBackward();         // cursor=5
-            vim.deleteBackward();       // delete 'o' at index 4 → Hell!, cursor=4
-
-            assertEquals("Hell!", vim.getContent());
-
-            vim.undo(); // restore 'o' → Hello!
-            assertEquals("Hello!", vim.getContent());
-
-            vim.undo(); // remove '!' → Hello
             assertEquals("Hello", vim.getContent());
+            vim.redo();
+            assertEquals("HeXYZllo", vim.getContent());
+        }
 
-            vim.undo(); // restore 'h' → hello
-            assertEquals("hello", vim.getContent());
+        // --- Redo for remaining command types ---
+
+        @Test
+        @DisplayName("redo after undo deleteCurrent — re-deletes char")
+        void redoDeleteCurrent() {
+            vim.deleteCurrent(); // "ello", cursor=0
+            vim.undo(); // "Hello", cursor=0
+            vim.redo(); // "ello", cursor=0
+            assertEquals("ello", vim.getContent());
+            assertEquals(0, vim.getCursor());
         }
 
         @Test
-        @DisplayName("redo is cleared after any new edit")
-        void testRedoClearedAfterEdit() {
-            VimOperations vim = new VimOperations("abc");
-            vim.insertCurrent('d');      // abcd
-            vim.undo();                  // abc, redo has 'd'
-
-            vim.deleteBackward();        // ab, redo cleared
-            assertFalse(vim.redo());
-            assertEquals("ab", vim.getContent());
+        @DisplayName("redo after undo replaceCurrent — re-replaces char")
+        void redoReplaceCurrent() {
+            vim.replaceCurrent('Z'); // "Zello", cursor=0
+            vim.undo(); // "Hello", cursor=0
+            vim.redo(); // "Zello", cursor=0
+            assertEquals("Zello", vim.getContent());
+            assertEquals(0, vim.getCursor());
         }
 
         @Test
-        @DisplayName("undo all then redo all")
-        void testUndoAllRedoAll() {
-            VimOperations vim = new VimOperations();
-            vim.insertCurrent('a');
-            vim.insertCurrent('b');
-            vim.insertCurrent('c');
-            vim.moveToHead();
-            vim.replaceCurrent('A');
-            vim.moveToTail();
-            vim.deleteBackward();
+        @DisplayName("redo insertRange — verifies cursor restored")
+        void redoInsertRangeWithCursor() {
+            vim.moveCursorToTail(); // cursor=5
+            vim.insertRange(2, "XY"); // "HeXYllo", cursor=7
+            vim.undo(); // "Hello", cursor=5
+            assertEquals(5, vim.getCursor());
+            vim.redo(); // "HeXYllo", cursor=7
+            assertEquals("HeXYllo", vim.getContent());
+            assertEquals(7, vim.getCursor());
+        }
 
-            // Undo everything
-            while (vim.undo()) {}
+        @Test
+        @DisplayName("redo deleteRange — verifies cursor restored")
+        void redoDeleteRangeWithCursor() {
+            vim.moveCursorToTail(); // cursor=5
+            vim.deleteRange(0, 2); // "llo", cursor=3
+            vim.undo(); // "Hello", cursor=5
+            assertEquals(5, vim.getCursor());
+            vim.redo(); // "llo", cursor=3
+            assertEquals("llo", vim.getContent());
+            assertEquals(3, vim.getCursor());
+        }
+
+        // --- Undo on empty content ---
+
+        @Test
+        @DisplayName("undo restores content from empty — delete all then undo")
+        void undoRestoresFromEmpty() {
+            vim.deleteRange(0, 5); // "", cursor=0
             assertEquals("", vim.getContent());
-
-            // Redo everything
-            while (vim.redo()) {}
-            assertEquals("Ab", vim.getContent());
+            vim.undo(); // "Hello", cursor=0
+            assertEquals("Hello", vim.getContent());
+            assertEquals(0, vim.getCursor());
         }
 
         @Test
-        @DisplayName("undo deleteRange then redo")
-        void testUndoRedoDeleteRange() {
-            VimOperations vim = new VimOperations("hello world");
-            vim.deleteRange(5, 11);
-            assertEquals("hello", vim.getContent());
+        @DisplayName("undo insertCurrent on empty content — back to empty")
+        void undoInsertCurrentOnEmpty() {
+            VimOperations v = new VimOperations();
+            v.insertCurrent('A'); // "A", cursor=1
+            v.undo(); // "", cursor=0
+            assertEquals("", v.getContent());
+            assertEquals(0, v.getCursor());
+        }
 
-            vim.undo();
-            assertEquals("hello world", vim.getContent());
+        // --- Interleaved undo/redo ---
 
-            vim.redo();
-            assertEquals("hello", vim.getContent());
+        @Test
+        @DisplayName("interleaved undo/redo — undo 2, redo 1, undo 1")
+        void interleavedUndoRedo() {
+            vim.insertCurrent('A'); // "AHello", cursor=1
+            vim.insertCurrent('B'); // "ABHello", cursor=2
+            vim.insertCurrent('C'); // "ABCHello", cursor=3
+            vim.undo(); // "ABHello", cursor=2
+            vim.undo(); // "AHello", cursor=1
+            vim.redo(); // "ABHello", cursor=2
+            assertEquals("ABHello", vim.getContent());
+            assertEquals(2, vim.getCursor());
+            vim.undo(); // "AHello", cursor=1
+            assertEquals("AHello", vim.getContent());
+            assertEquals(1, vim.getCursor());
         }
 
         @Test
-        @DisplayName("undo replaceRange then redo")
-        void testUndoRedoReplaceRange() {
-            VimOperations vim = new VimOperations("hello world");
-            vim.replaceRange(0, 5, "HI");
-            assertEquals("HI world", vim.getContent());
+        @DisplayName("undo after undo+redo cycle — can undo again")
+        void undoAfterUndoRedoCycle() {
+            vim.replaceCurrent('X'); // "Xello"
+            vim.undo(); // "Hello"
+            vim.redo(); // "Xello"
+            vim.undo(); // "Hello"
+            assertEquals("Hello", vim.getContent());
+            assertEquals(0, vim.getCursor());
+        }
 
-            vim.undo();
-            assertEquals("hello world", vim.getContent());
+        // --- Partial redo then new op ---
 
-            vim.redo();
-            assertEquals("HI world", vim.getContent());
+        @Test
+        @DisplayName("partial redo then new op — clears remaining redo")
+        void partialRedoThenNewOp() {
+            vim.insertCurrent('A'); // "AHello"
+            vim.insertCurrent('B'); // "ABHello"
+            vim.insertCurrent('C'); // "ABCHello"
+            vim.undo(); // "ABHello"
+            vim.undo(); // "AHello"
+            vim.undo(); // "Hello"
+            vim.redo(); // "AHello" — redo stack still has B, C
+            assertEquals("AHello", vim.getContent());
+            vim.insertCurrent('Z'); // "AZHello" — new op clears redo
+            vim.redo(); // no-op
+            assertEquals("AZHello", vim.getContent());
+            assertEquals(2, vim.getCursor());
+        }
+
+        // --- Undo replaceRange with length-changing replacement ---
+
+        @Test
+        @DisplayName("undo replaceRange shorter — cursor restored after shrink")
+        void undoReplaceRangeShorter() {
+            vim.moveCursorToTail(); // cursor=5
+            vim.replaceRange(0, 3, "X"); // "Xlo", cursor=3
+            assertEquals(3, vim.getCursor());
+            vim.undo(); // "Hello", cursor=5
+            assertEquals("Hello", vim.getContent());
+            assertEquals(5, vim.getCursor());
+        }
+
+        @Test
+        @DisplayName("undo replaceRange longer — cursor restored after grow")
+        void undoReplaceRangeLonger() {
+            vim.moveCursorToTail(); // cursor=5
+            vim.replaceRange(0, 1, "XYZ"); // "XYZello", cursor=7
+            assertEquals(7, vim.getCursor());
+            vim.undo(); // "Hello", cursor=5
+            assertEquals("Hello", vim.getContent());
+            assertEquals(5, vim.getCursor());
+        }
+
+        // --- Cursor movement between op and undo ---
+
+        @Test
+        @DisplayName("cursor move between op and undo — undo still restores correctly")
+        void cursorMoveBetweenOpAndUndo() {
+            vim.insertCurrent('X'); // "XHello", cursor=1
+            vim.moveCursorToTail(); // cursor=6
+            vim.moveCursorBackward(); // cursor=5
+            vim.undo(); // undoes insert, restores cursor to 0 (prevCursor)
+            assertEquals("Hello", vim.getContent());
+            assertEquals(0, vim.getCursor());
+        }
+
+        // --- Stress: all 6 command types in sequence ---
+
+        @Test
+        @DisplayName("undo/redo all 6 command types in sequence")
+        void undoRedoAllCommandTypes() {
+            // 1. insertCurrent
+            vim.insertCurrent('A'); // "AHello", cursor=1
+            // 2. deleteCurrent
+            vim.deleteCurrent(); // "Aello", cursor=1 (deleted 'H')
+            // 3. deleteBackward
+            vim.moveCursorForward(); // cursor=2
+            vim.deleteBackward(); // "Allo", cursor=1 (deleted 'e' at idx 1)
+            // 4. insertRange
+            vim.insertRange(1, "XY"); // "AXYllo", cursor=3
+            // 5. replaceCurrent
+            vim.replaceCurrent('Z'); // "AXYZlo", cursor=3 (replaced 'l' with 'Z')
+            // 6. replaceRange
+            vim.replaceRange(0, 2, "QW"); // "QWYZlo", cursor=3
+
+            assertEquals("QWYZlo", vim.getContent());
+            assertEquals(3, vim.getCursor());
+
+            // Undo all 6 in reverse
+            vim.undo(); // undo replaceRange → "AXYZlo", cursor=3
+            assertEquals("AXYZlo", vim.getContent());
+            vim.undo(); // undo replaceCurrent → "AXYllo", cursor=3
+            assertEquals("AXYllo", vim.getContent());
+            vim.undo(); // undo insertRange → "Allo", cursor=1
+            assertEquals("Allo", vim.getContent());
+            assertEquals(1, vim.getCursor());
+            vim.undo(); // undo deleteBackward → "Aello", cursor=2
+            assertEquals("Aello", vim.getContent());
+            assertEquals(2, vim.getCursor());
+            vim.undo(); // undo deleteCurrent → "AHello", cursor=1
+            assertEquals("AHello", vim.getContent());
+            assertEquals(1, vim.getCursor());
+            vim.undo(); // undo insertCurrent → "Hello", cursor=0
+            assertEquals("Hello", vim.getContent());
+            assertEquals(0, vim.getCursor());
+
+            // Redo all 6 forward
+            vim.redo(); // "AHello", cursor=1
+            assertEquals("AHello", vim.getContent());
+            vim.redo(); // "Aello", cursor=1
+            assertEquals("Aello", vim.getContent());
+            vim.redo(); // "Allo", cursor=1
+            assertEquals("Allo", vim.getContent());
+            vim.redo(); // "AXYllo", cursor=3
+            assertEquals("AXYllo", vim.getContent());
+            vim.redo(); // "AXYZlo", cursor=3
+            assertEquals("AXYZlo", vim.getContent());
+            vim.redo(); // "QWYZlo", cursor=3
+            assertEquals("QWYZlo", vim.getContent());
+            assertEquals(3, vim.getCursor());
         }
     }
 }

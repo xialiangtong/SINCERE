@@ -27,7 +27,7 @@ public class Compare4SolutionTest {
         @Test
         @DisplayName("isCorrect returns true when all EXACT")
         void testIsCorrectAllExact() {
-            int[] result = {1, 1, 1, 1};
+            Compare4Solution.MatchStatus[] result = {Compare4Solution.MatchStatus.EXACT, Compare4Solution.MatchStatus.EXACT, Compare4Solution.MatchStatus.EXACT, Compare4Solution.MatchStatus.EXACT};
             Compare4Solution.CompareResult cr = new Compare4Solution.CompareResult("JAVA", result);
             assertTrue(cr.isCorrect());
         }
@@ -35,7 +35,7 @@ public class Compare4SolutionTest {
         @Test
         @DisplayName("isCorrect returns false when not all EXACT")
         void testIsCorrectNotAllExact() {
-            int[] result = {1, 0, -1, 1};
+            Compare4Solution.MatchStatus[] result = {Compare4Solution.MatchStatus.EXACT, Compare4Solution.MatchStatus.MISPLACED, Compare4Solution.MatchStatus.ABSENT, Compare4Solution.MatchStatus.EXACT};
             Compare4Solution.CompareResult cr = new Compare4Solution.CompareResult("JAVA", result);
             assertFalse(cr.isCorrect());
         }
@@ -43,7 +43,7 @@ public class Compare4SolutionTest {
         @Test
         @DisplayName("isCorrect returns false when all ABSENT")
         void testIsCorrectAllAbsent() {
-            int[] result = {-1, -1, -1, -1};
+            Compare4Solution.MatchStatus[] result = {Compare4Solution.MatchStatus.ABSENT, Compare4Solution.MatchStatus.ABSENT, Compare4Solution.MatchStatus.ABSENT, Compare4Solution.MatchStatus.ABSENT};
             Compare4Solution.CompareResult cr = new Compare4Solution.CompareResult("XXXX", result);
             assertFalse(cr.isCorrect());
         }
@@ -51,35 +51,35 @@ public class Compare4SolutionTest {
         @Test
         @DisplayName("getGuess returns the guess string")
         void testGetGuess() {
-            Compare4Solution.CompareResult cr = new Compare4Solution.CompareResult("JAVA", new int[]{1, 1, 1, 1});
+            Compare4Solution.CompareResult cr = new Compare4Solution.CompareResult("JAVA", new Compare4Solution.MatchStatus[]{Compare4Solution.MatchStatus.EXACT, Compare4Solution.MatchStatus.EXACT, Compare4Solution.MatchStatus.EXACT, Compare4Solution.MatchStatus.EXACT});
             assertEquals("JAVA", cr.getGuess());
         }
 
         @Test
         @DisplayName("getResult returns a copy of the result array")
         void testGetResultCopy() {
-            int[] result = {1, 0, -1, 1};
+            Compare4Solution.MatchStatus[] result = {Compare4Solution.MatchStatus.EXACT, Compare4Solution.MatchStatus.MISPLACED, Compare4Solution.MatchStatus.ABSENT, Compare4Solution.MatchStatus.EXACT};
             Compare4Solution.CompareResult cr = new Compare4Solution.CompareResult("JAVA", result);
-            int[] returned = cr.getResult();
+            Compare4Solution.MatchStatus[] returned = cr.getResult();
             assertArrayEquals(result, returned);
             // Modifying returned copy should not affect internal state
-            returned[0] = -1;
-            assertEquals(1, cr.getResult()[0]);
+            returned[0] = Compare4Solution.MatchStatus.ABSENT;
+            assertEquals(Compare4Solution.MatchStatus.EXACT, cr.getResult()[0]);
         }
 
         @Test
         @DisplayName("constructor copies the result array")
         void testConstructorCopiesArray() {
-            int[] result = {1, 0, -1, 1};
+            Compare4Solution.MatchStatus[] result = {Compare4Solution.MatchStatus.EXACT, Compare4Solution.MatchStatus.MISPLACED, Compare4Solution.MatchStatus.ABSENT, Compare4Solution.MatchStatus.EXACT};
             Compare4Solution.CompareResult cr = new Compare4Solution.CompareResult("JAVA", result);
-            result[0] = -1; // mutate original
-            assertEquals(1, cr.getResult()[0]); // internal not affected
+            result[0] = Compare4Solution.MatchStatus.ABSENT; // mutate original
+            assertEquals(Compare4Solution.MatchStatus.EXACT, cr.getResult()[0]); // internal not affected
         }
 
         @Test
         @DisplayName("toString produces readable output")
         void testToString() {
-            int[] result = {1, 0, -1, 1};
+            Compare4Solution.MatchStatus[] result = {Compare4Solution.MatchStatus.EXACT, Compare4Solution.MatchStatus.MISPLACED, Compare4Solution.MatchStatus.ABSENT, Compare4Solution.MatchStatus.EXACT};
             Compare4Solution.CompareResult cr = new Compare4Solution.CompareResult("JAVA", result);
             String str = cr.toString();
             assertTrue(str.contains("JAVA"));
@@ -393,9 +393,8 @@ public class Compare4SolutionTest {
         void testResultValuesRange() {
             Compare4Solution game = new Compare4Solution(defaultDic(), "JAVA");
             Compare4Solution.CompareResult result = game.guess("CODE");
-            for (int r : result.getResult()) {
-                assertTrue(r >= -1 && r <= 1,
-                        "Result value " + r + " is out of range [-1, 1]");
+            for (Compare4Solution.MatchStatus r : result.getResult()) {
+                assertNotNull(r, "Result value must not be null");
             }
         }
 
@@ -404,7 +403,7 @@ public class Compare4SolutionTest {
         void testExactMatchAllExact() {
             Compare4Solution game = new Compare4Solution(defaultDic(), "JAVA");
             Compare4Solution.CompareResult result = game.guess("JAVA");
-            assertArrayEquals(new int[]{1, 1, 1, 1}, result.getResult());
+            assertArrayEquals(new Compare4Solution.MatchStatus[]{Compare4Solution.MatchStatus.EXACT, Compare4Solution.MatchStatus.EXACT, Compare4Solution.MatchStatus.EXACT, Compare4Solution.MatchStatus.EXACT}, result.getResult());
         }
     }
 
@@ -420,7 +419,7 @@ public class Compare4SolutionTest {
             Compare4Solution game = new Compare4Solution(defaultDic(), "JAVA");
             Compare4Solution.CompareResult result = game.guess("BOOK");
             // J≠B, A≠O, V≠O, A≠K → all absent
-            assertArrayEquals(new int[]{-1, -1, -1, -1}, result.getResult());
+            assertArrayEquals(new Compare4Solution.MatchStatus[]{Compare4Solution.MatchStatus.ABSENT, Compare4Solution.MatchStatus.ABSENT, Compare4Solution.MatchStatus.ABSENT, Compare4Solution.MatchStatus.ABSENT}, result.getResult());
         }
 
         @Test
@@ -431,7 +430,7 @@ public class Compare4SolutionTest {
             Compare4Solution game = new Compare4Solution(dic, "ABCD");
             Compare4Solution.CompareResult result = game.guess("DCBA");
             // D≠A, C≠B, B≠C, A≠D but all exist → all misplaced
-            assertArrayEquals(new int[]{0, 0, 0, 0}, result.getResult());
+            assertArrayEquals(new Compare4Solution.MatchStatus[]{Compare4Solution.MatchStatus.MISPLACED, Compare4Solution.MatchStatus.MISPLACED, Compare4Solution.MatchStatus.MISPLACED, Compare4Solution.MatchStatus.MISPLACED}, result.getResult());
         }
 
         @Test
@@ -449,7 +448,7 @@ public class Compare4SolutionTest {
             // pos1: D → in remaining → 0, remaining D=0
             // pos2: A → not in remaining → -1
             // pos3: A → not in remaining → -1
-            assertArrayEquals(new int[]{1, 0, -1, -1}, result.getResult());
+            assertArrayEquals(new Compare4Solution.MatchStatus[]{Compare4Solution.MatchStatus.EXACT, Compare4Solution.MatchStatus.MISPLACED, Compare4Solution.MatchStatus.ABSENT, Compare4Solution.MatchStatus.ABSENT}, result.getResult());
         }
 
         @Test
@@ -461,7 +460,7 @@ public class Compare4SolutionTest {
             // pos1: D≠A → remaining: A(1), B(1), C(1)
             // pos2: A≠B → A in remaining(count=1) → 0, decrement A to 0
             // pos3: A≠C → A not available → -1
-            assertArrayEquals(new int[]{1, -1, 0, -1}, result.getResult());
+            assertArrayEquals(new Compare4Solution.MatchStatus[]{Compare4Solution.MatchStatus.EXACT, Compare4Solution.MatchStatus.ABSENT, Compare4Solution.MatchStatus.MISPLACED, Compare4Solution.MatchStatus.ABSENT}, result.getResult());
         }
 
         @Test
@@ -473,7 +472,7 @@ public class Compare4SolutionTest {
             // pos1: A≠B → A not in remaining (only B,C,D) → -1
             // pos2: B≠C → B in remaining → 0
             // pos3: C≠D → C in remaining → 0
-            assertArrayEquals(new int[]{1, -1, 0, 0}, result.getResult());
+            assertArrayEquals(new Compare4Solution.MatchStatus[]{Compare4Solution.MatchStatus.EXACT, Compare4Solution.MatchStatus.ABSENT, Compare4Solution.MatchStatus.MISPLACED, Compare4Solution.MatchStatus.MISPLACED}, result.getResult());
         }
 
         @Test
@@ -485,7 +484,7 @@ public class Compare4SolutionTest {
             // pos1: I≠A → remaining: A(1), R(1), K(1)
             // pos2: K≠R → K in remaining → 0
             // pos3: E≠K → E not in remaining → -1
-            assertArrayEquals(new int[]{1, -1, 0, -1}, result.getResult());
+            assertArrayEquals(new Compare4Solution.MatchStatus[]{Compare4Solution.MatchStatus.EXACT, Compare4Solution.MatchStatus.ABSENT, Compare4Solution.MatchStatus.MISPLACED, Compare4Solution.MatchStatus.ABSENT}, result.getResult());
         }
 
         @Test
@@ -493,7 +492,7 @@ public class Compare4SolutionTest {
         void testSameWord() {
             Compare4Solution game = new Compare4Solution(defaultDic(), "CODE");
             Compare4Solution.CompareResult result = game.guess("CODE");
-            assertArrayEquals(new int[]{1, 1, 1, 1}, result.getResult());
+            assertArrayEquals(new Compare4Solution.MatchStatus[]{Compare4Solution.MatchStatus.EXACT, Compare4Solution.MatchStatus.EXACT, Compare4Solution.MatchStatus.EXACT, Compare4Solution.MatchStatus.EXACT}, result.getResult());
         }
 
         @Test
@@ -502,7 +501,7 @@ public class Compare4SolutionTest {
             Compare4Solution game = new Compare4Solution(defaultDic(), "JAVA");
             Compare4Solution.CompareResult result = game.guess("CODE");
             // J≠C, A≠O, V≠D, A≠E → no overlap
-            assertArrayEquals(new int[]{-1, -1, -1, -1}, result.getResult());
+            assertArrayEquals(new Compare4Solution.MatchStatus[]{Compare4Solution.MatchStatus.ABSENT, Compare4Solution.MatchStatus.ABSENT, Compare4Solution.MatchStatus.ABSENT, Compare4Solution.MatchStatus.ABSENT}, result.getResult());
         }
 
         @Test
@@ -514,7 +513,7 @@ public class Compare4SolutionTest {
             // pos1: O≠A → remaining: A(1), R(1), D(1)
             // pos2: D≠R → D in remaining → 0
             // pos3: E≠D → E not in remaining → -1
-            assertArrayEquals(new int[]{1, -1, 0, -1}, result.getResult());
+            assertArrayEquals(new Compare4Solution.MatchStatus[]{Compare4Solution.MatchStatus.EXACT, Compare4Solution.MatchStatus.ABSENT, Compare4Solution.MatchStatus.MISPLACED, Compare4Solution.MatchStatus.ABSENT}, result.getResult());
         }
 
         @Test
