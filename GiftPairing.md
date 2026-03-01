@@ -13,7 +13,22 @@ No immediate family - Family members cannot be matched together
 No repeat from last year - Cannot have same pairing as previous year
 Department restriction - Cannot match people from same team/department
 
+My ideas for the design :
+1. need a top class GiftPairingSolution (all other classes would be inner classes for it)
+2. need class Participant — pure data class, fields : name, family, dept. No business logic (rules inspect fields directly).
+3. need class Pairing, fields : Participant sender, Participant receiver
+4. need class CSVReader, it takes in a csv file, and parse the data into a list of Participant
+5. need class CSVWriter, it writes a list of Pairing to csv file
+6. need an interface Rule, define isValid(Pairing p) → boolean. Takes Pairing (not two Participants) so rules can reason about the directional relationship.
+7. need class NoSelfMatchRule / NoSameFamilyRule / NoSameDeptRule / NoRepeatFromLastYearRule, all implement Rule interface. NoRepeatFromLastYearRule is stateful (holds last year's pairings in constructor).
+8. need class PairingEngine, given a list of Participant (used as both senders and receivers).
+   Provides method findPairings(List<Participant>) → List<Pairing>, uses backtracking algorithm. Applies all rules to validate each candidate pairing.
+   Provides field List<Rule> rules. Methods : addRule() / removeRule()
+9. in the top level class, fields : CSVReader csvReader, CSVWriter csvWriter, PairingEngine engine
+   methods : generatePairings(inputFile) → List<Pairing>, exportPairings(outputFile, pairings)
+   Note: participants are transient input, not stored as a field.
 
+---------------------------------------------------------------------------------------------------------------------
 ┌─────────────────────────────────────────────────────────────────────┐
 │                      GiftPairingSolution (top-level)                │
 │                                                                     │
