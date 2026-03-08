@@ -99,47 +99,48 @@ Redis:
 
 ## 5. High-Level Architecture
 
+**Single monolithic app — no microservices.** One app server handles product reads, inventory reservation, and checkout. Background worker threads handle reservation expiry and sale lifecycle.
+
 ```
                         ┌──────────┐
                         │   CDN    │ ← static assets, product images
                         └────┬─────┘
                              │
     ┌────────────────────────▼───────────────────────┐
-    │              API Gateway                        │
+    │              API Gateway / Load Balancer        │
     │   (Auth, Rate Limit per user, Queue Gate)       │
-    └──┬────────────────┬───────────────┬─────────────┘
-       │                │               │
-       ▼                ▼               ▼
-  ┌─────────┐   ┌──────────────┐  ┌───────────┐
-  │ Product  │   │  Inventory   │  │ Checkout  │
-  │ Service  │   │  Service     │  │ Service   │
-  │ (read)   │   │ (reserve)    │  │ (purchase)│
-  └────┬─────┘   └──────┬───────┘  └─────┬─────┘
-       │                │                 │
-       ▼                ▼                 ▼
-  ┌─────────┐   ┌──────────────┐  ┌───────────────┐
-  │  Redis   │   │    Redis     │  │  Payment      │
-  │  Cache   │   │  Counter +   │  │  Gateway      │
-  │(product) │   │  Queue       │  │  (Stripe/etc) │
-  └─────────┘   └──────────────┘  └───────────────┘
-       │                │                 │
-       └────────────────┼─────────────────┘
-                        ▼
-                 ┌──────────────┐
-                 │  PostgreSQL  │
-                 │  (source of  │
-                 │   truth)     │
-                 └──────────────┘
+    └────────────────────┬────────────────────────────┘
+                         │
+                         ▼
+              ┌─────────────────────┐
+              │    App Server        │  (stateless, horizontally scaled)
+              │                     │
+              │  Routes:             │
+              │  • GET  /product     │  → Redis cache → Postgres
+              │  • POST /reserve     │  → Redis DECR  → Postgres
+              │  • POST /checkout    │  → Postgres    → Payment Gateway
+              │  • DELETE /reserve   │  → Redis INCR  → Postgres
+              │                     │
+              │  Background Workers: │
+              │  • Reservation expiry│  (every 30s, expire stale holds)
+              │  • Sale lifecycle    │  (activate/deactivate sales)
+              └──┬──────┬───────┬───┘
+                 │      │       │
+                 ▼      ▼       ▼
+          ┌────────┐ ┌──────┐ ┌──────────────┐
+          │ Redis  │ │Postgres│ │ Payment      │
+          │        │ │       │ │ Gateway      │
+          │• cache │ │• urls │ │ (Stripe/etc) │
+          │• counter│ │• orders│ │              │
+          │• queue │ │• resv │ │              │
+          └────────┘ └──────┘ └──────────────┘
+```
 
-Workers:
-  ┌─────────────────────┐  ┌──────────────────────┐
-  │ Reservation Expiry   │  │ Sale Lifecycle       │
-  │ Worker               │  │ Worker               │
-  │ • expire stale       │  │ • activate at        │
-  │   reservations       │  │   starts_at          │
-  │ • return qty to      │  │ • deactivate at      │
-  │   Redis counter      │  │   ends_at            │
-  └─────────────────────┘  └──────────────────────┘
+**Why no microservices?**
+- Flash sale logic is tightly coupled (reserve → checkout → payment)
+- A single deploy unit is simpler to reason about, deploy, and debug
+- Horizontal scaling is done by adding more app server instances (stateless)
+- At Shopify's scale, a monolith + Redis + Postgres handles 10K/sec fine
 ```
 
 ---
@@ -155,7 +156,7 @@ Customer clicks "Buy Now"
 API Gateway (rate limit: 10 req/sec/user)
     │
     ▼
-Inventory Service:
+App Server → POST /reserve handler:
     1. DECR flash_sale:{sale_id}:remaining in Redis
        → if result >= 0: reservation granted
        → if result < 0:  INCR back, return "SOLD OUT"
@@ -172,7 +173,7 @@ Inventory Service:
 Customer clicks "Pay"
     │
     ▼
-Checkout Service:
+App Server → POST /checkout handler:
     1. Validate reservation exists + not expired
     2. Create order (idempotency_key = dedup)
     3. Call Payment Gateway (charge card)
@@ -185,7 +186,7 @@ Checkout Service:
        - INCR Redis counter (return inventory)
 ```
 
-### Flow 3: Reservation Expiry (worker)
+### Flow 3: Reservation Expiry (background worker thread in app server)
 
 ```
 Every 30 seconds:
@@ -198,6 +199,10 @@ Every 30 seconds:
       - INCR flash_sale:{sale_id}:remaining in Redis
       (inventory returns to pool for others)
 ```
+
+Runs as a scheduled thread inside the app server (e.g., @Scheduled in Spring,
+cron job in Rails). Only one instance should run this — use a Postgres advisory
+lock or a Redis SETNX lock to prevent duplicate execution across instances.
 
 ---
 
@@ -301,7 +306,7 @@ This only matters at extreme scale. For most Shopify merchants, synchronous chec
 | Requirements | 5 min | Emphasize 10K/sec spike + no overselling |
 | Entities + API | 5 min | Quick, show idempotency_key |
 | Schema | 3 min | 3 tables + Redis counter — keep simple |
-| Architecture | 7 min | Draw the diagram, explain CDN → Gateway → Services → Redis → Postgres |
+| Architecture | 7 min | Draw the diagram, explain CDN → Gateway → App Server → Redis → Postgres |
 | Key Flows | 8 min | Reserve flow is the star — show Redis DECR trick |
 | Deep Dive: Overselling | 4 min | Redis fast path + Postgres source of truth |
 | Deep Dive: Traffic Spike | 4 min | Queue gate pattern |
