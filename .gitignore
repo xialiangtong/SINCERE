@@ -7,6 +7,9 @@
 # Allow only .java and .md files
 !*.java
 !*.md
+!*.py
+!*.txt
+!*.sh
 
 # Allow .gitignore itself
 !.gitignore
